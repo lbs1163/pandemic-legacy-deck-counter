@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { addCity, getDeckSnapshot } from '@/lib/deckState';
+import { addCity } from '@/lib/deckState';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {

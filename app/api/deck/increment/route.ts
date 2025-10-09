@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getDeckSnapshot, incrementDiscard } from '@/lib/deckState';
+import { incrementDiscard } from '@/lib/deckState';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getDeckSnapshot, triggerEpidemic } from '@/lib/deckState';
+import { triggerEpidemic } from '@/lib/deckState';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {

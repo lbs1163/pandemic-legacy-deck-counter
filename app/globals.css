@@ -163,6 +163,30 @@ button {
   gap: 8px;
 }
 
+.layerList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.layerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.layerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: #fb923c;
+}
+
 .zoneListItem {
   display: flex;
   align-items: center;
@@ -311,5 +335,9 @@ button {
 
   .candidateList li button:hover {
     border-color: rgba(96, 165, 250, 0.6);
+  }
+
+  .layerBlock:hover {
+    border-color: rgba(251, 146, 60, 0.6);
   }
 }

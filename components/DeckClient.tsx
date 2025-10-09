@@ -1,22 +1,12 @@
 'use client';
 
+import type { DeckSnapshot } from '@/lib/deckState';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type Zone = 'A' | 'B' | 'C';
+type DeckData = DeckSnapshot;
 
-type DeckData = {
-  cities: {
-    name: string;
-    counts: Record<Zone, number>;
-  }[];
-  totals: Record<Zone | 'total', number>;
-};
-
-const ZONE_INFO: Record<
-  Zone,
-  { title: string; description: string; accent: string }
-> = {
+const ZONE_INFO = {
   A: {
     title: 'A · 버려진 더미',
     description: '이미 공개된 감염 카드',
@@ -24,7 +14,7 @@ const ZONE_INFO: Record<
   },
   B: {
     title: 'B · 혼합된 상단',
-    description: '전염 카드 후 위쪽에 쌓인 카드',
+    description: '전염 카드 후 위쪽에 쌓인 카드 (위 레이어부터 순서대로)',
     accent: '#fb923c'
   },
   C: {
@@ -32,7 +22,7 @@ const ZONE_INFO: Record<
     description: '아직 공개되지 않은 감염 카드',
     accent: '#60a5fa'
   }
-};
+} as const;
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -72,17 +62,6 @@ async function mutateDeck(
   }
 
   return data as DeckData;
-}
-
-function sortByZoneCount(cities: DeckData['cities'], zone: Zone) {
-  return [...cities].sort((a, b) => {
-    const diff = b.counts[zone] - a.counts[zone];
-    if (diff !== 0) {
-      return diff;
-    }
-
-    return a.name.localeCompare(b.name, 'ko');
-  });
 }
 
 interface DeckClientProps {
@@ -125,17 +104,9 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     return () => clearInterval(timer);
   }, [isBusy, refresh]);
 
-  const zoneViews = useMemo(() => {
-    return {
-      A: sortByZoneCount(deck.cities, 'A'),
-      B: sortByZoneCount(deck.cities, 'B'),
-      C: sortByZoneCount(deck.cities, 'C')
-    };
-  }, [deck.cities]);
-
   const epidemicCandidates = useMemo(
-    () => deck.cities.filter((city) => city.counts.C > 0),
-    [deck.cities]
+    () => deck.zoneC.filter((city) => city.count > 0),
+    [deck.zoneC]
   );
 
   const handleIncrement = useCallback(
@@ -251,41 +222,105 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       {error && <p className="errorBanner">{error}</p>}
 
       <section className="zones">
-        {(Object.keys(ZONE_INFO) as Zone[]).map((zone) => (
-          <div
-            key={zone}
-            className="zoneCard"
-            style={{ borderColor: ZONE_INFO[zone].accent }}
-          >
-            <header className="zoneHeader">
-              <h2>{ZONE_INFO[zone].title}</h2>
-              <p>{ZONE_INFO[zone].description}</p>
-            </header>
+        <div
+          className="zoneCard"
+          style={{ borderColor: ZONE_INFO.A.accent }}
+        >
+          <header className="zoneHeader">
+            <h2>{ZONE_INFO.A.title}</h2>
+            <p>{ZONE_INFO.A.description}</p>
+          </header>
 
-            <ul className="zoneList">
-              {zoneViews[zone].map((city) => (
-                <li key={`${zone}-${city.name}`} className="zoneListItem">
-                  <div className="zoneCityText">
-                    <span className="cityName">{city.name}</span>
-                    <span className="cityCount">
-                      {city.counts[zone]}
-                      <span className="countUnit">장</span>
-                    </span>
+          <ul className="zoneList">
+            {deck.zoneA.map((city) => (
+              <li key={`A-${city.name}`} className="zoneListItem">
+                <div className="zoneCityText">
+                  <span className="cityName">{city.name}</span>
+                  <span className="cityCount">
+                    {city.count}
+                    <span className="countUnit">장</span>
+                  </span>
+                </div>
+                <button
+                  className="addButton"
+                  onClick={() => void handleIncrement(city.name)}
+                  disabled={isBusy}
+                >
+                  +
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div
+          className="zoneCard"
+          style={{ borderColor: ZONE_INFO.B.accent }}
+        >
+          <header className="zoneHeader">
+            <h2>{ZONE_INFO.B.title}</h2>
+            <p>{ZONE_INFO.B.description}</p>
+          </header>
+
+          {deck.zoneBLayers.length === 0 ? (
+            <p className="emptyMessage">B 영역에 카드가 없습니다.</p>
+          ) : (
+            <div className="layerList">
+              {deck.zoneBLayers.map((layer) => {
+                const layerLabel =
+                  layer.position === 1 ? 'B1 · 상단' : `B${layer.position}`;
+                return (
+                  <div key={layer.id} className="layerBlock">
+                    <div className="layerHeader">
+                      <span>{layerLabel}</span>
+                      <span>{layer.total}장</span>
+                    </div>
+                    <ul className="zoneList">
+                      {layer.cities.map((city) => (
+                        <li
+                          key={`B${layer.id}-${city.name}`}
+                          className="zoneListItem"
+                        >
+                          <div className="zoneCityText">
+                            <span className="cityName">{city.name}</span>
+                            <span className="cityCount">
+                              {city.count}
+                              <span className="countUnit">장</span>
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  {zone === 'A' && (
-                    <button
-                      className="addButton"
-                      onClick={() => void handleIncrement(city.name)}
-                      disabled={isBusy}
-                    >
-                      +
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div
+          className="zoneCard"
+          style={{ borderColor: ZONE_INFO.C.accent }}
+        >
+          <header className="zoneHeader">
+            <h2>{ZONE_INFO.C.title}</h2>
+            <p>{ZONE_INFO.C.description}</p>
+          </header>
+
+          <ul className="zoneList">
+            {deck.zoneC.map((city) => (
+              <li key={`C-${city.name}`} className="zoneListItem">
+                <div className="zoneCityText">
+                  <span className="cityName">{city.name}</span>
+                  <span className="cityCount">
+                    {city.count}
+                    <span className="countUnit">장</span>
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       <section className="newCitySection">
@@ -323,7 +358,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                       disabled={isBusy}
                     >
                       <span>{city.name}</span>
-                      <span>{city.counts.C}장</span>
+                      <span>{city.count}장</span>
                     </button>
                   </li>
                 ))}

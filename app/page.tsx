@@ -1,7 +1,7 @@
 import DeckClient from '@/components/DeckClient';
 import { getDeckSnapshot } from '@/lib/deckState';
 
-export default function HomePage() {
-  const snapshot = getDeckSnapshot();
+export default async function HomePage() {
+  const snapshot = await getDeckSnapshot();
   return <DeckClient initialData={snapshot} />;
 }

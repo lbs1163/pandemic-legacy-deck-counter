@@ -225,6 +225,9 @@ button {
   border-radius: 50%;
   background: #2563eb;
   color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .newCitySection {

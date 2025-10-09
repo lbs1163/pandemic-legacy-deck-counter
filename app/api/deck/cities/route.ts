@@ -13,8 +13,8 @@ export async function POST(request: Request) {
       );
     }
 
-    addCity(city);
-    return NextResponse.json(getDeckSnapshot());
+    const snapshot = await addCity(city);
+    return NextResponse.json(snapshot);
   } catch (error) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

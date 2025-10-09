@@ -1,3 +1,5 @@
+import { kv } from '@vercel/kv';
+
 const INITIAL_CITIES = [
   '뉴욕',
   '워싱턴',
@@ -9,6 +11,10 @@ const INITIAL_CITIES = [
   '카이로',
   '라고스'
 ];
+
+const KV_DECK_KEY = 'pandemic:deck-state:v1';
+
+type Zone = 'A' | 'B' | 'C';
 
 export interface ZoneCityCount {
   name: string;
@@ -26,49 +32,118 @@ export interface DeckSnapshot {
   zoneA: ZoneCityCount[];
   zoneBLayers: DeckLayer[];
   zoneC: ZoneCityCount[];
-  totals: Record<'A' | 'B' | 'C' | 'total', number>;
+  totals: Record<Zone | 'total', number>;
 }
 
 type CityState = {
   name: string;
-  discard: number; // Zone A
-  safe: number; // Zone C
+  discard: number;
+  safe: number;
 };
 
 type HotLayer = {
   id: number;
-  cards: Map<string, number>;
+  cards: Record<string, number>;
 };
 
-const cityMap = new Map<string, CityState>();
-const cityOrder: string[] = [];
-const hotLayers: HotLayer[] = [];
-let nextLayerId = 1;
+type DeckStorage = {
+  cityOrder: string[];
+  cities: Record<string, CityState>;
+  hotLayers: HotLayer[];
+  nextLayerId: number;
+};
+
+type StateMutation = (state: DeckStorage) => void;
+
+const hasKv =
+  typeof process.env.KV_REST_API_URL === 'string' ||
+  typeof process.env.KV_URL === 'string' ||
+  typeof process.env.UPSTASH_REDIS_REST_URL === 'string';
+
+let memoryState: DeckStorage | null = null;
+
+function cloneState<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
 
 function normaliseCityName(name: string) {
   return name.trim();
 }
 
-function ensureCityExists(name: string) {
+function createInitialState(): DeckStorage {
+  const state: DeckStorage = {
+    cityOrder: [],
+    cities: {},
+    hotLayers: [],
+    nextLayerId: 1
+  };
+
+  INITIAL_CITIES.forEach((city) => ensureCityExists(state, city));
+  return state;
+}
+
+async function loadState(): Promise<DeckStorage> {
+  if (hasKv) {
+    const stored = await kv.get<DeckStorage>(KV_DECK_KEY);
+    if (stored) {
+      return cloneState(stored);
+    }
+    const initial = createInitialState();
+    await kv.set(KV_DECK_KEY, initial);
+    return cloneState(initial);
+  }
+
+  if (!memoryState) {
+    memoryState = createInitialState();
+  }
+
+  return cloneState(memoryState);
+}
+
+async function saveState(state: DeckStorage) {
+  if (hasKv) {
+    await kv.set(KV_DECK_KEY, state);
+    return;
+  }
+
+  memoryState = cloneState(state);
+}
+
+async function updateState(mutator: StateMutation): Promise<DeckSnapshot> {
+  const state = await loadState();
+  mutator(state);
+  cleanupEmptyLayers(state);
+  await saveState(state);
+  return buildSnapshot(state);
+}
+
+function ensureCityExists(state: DeckStorage, name: string) {
   const key = normaliseCityName(name);
 
   if (!key) {
     throw new Error('도시 이름이 필요합니다.');
   }
 
-  let city = cityMap.get(key);
-
-  if (!city) {
-    city = {
+  if (!state.cities[key]) {
+    state.cities[key] = {
       name: key,
       discard: 0,
       safe: 3
     };
-    cityMap.set(key, city);
-    cityOrder.push(key);
+    state.cityOrder.push(key);
   }
 
-  return city;
+  return state.cities[key];
+}
+
+function cleanupEmptyLayers(state: DeckStorage) {
+  for (let index = state.hotLayers.length - 1; index >= 0; index -= 1) {
+    const layer = state.hotLayers[index];
+    const hasCards = Object.values(layer.cards).some((count) => count > 0);
+    if (!hasCards) {
+      state.hotLayers.splice(index, 1);
+    }
+  }
 }
 
 function sortCities(list: ZoneCityCount[]): ZoneCityCount[] {
@@ -81,40 +156,32 @@ function sortCities(list: ZoneCityCount[]): ZoneCityCount[] {
   });
 }
 
-function cleanupEmptyLayers() {
-  for (let index = hotLayers.length - 1; index >= 0; index -= 1) {
-    if (hotLayers[index].cards.size === 0) {
-      hotLayers.splice(index, 1);
-    }
-  }
-}
-
-function computeTotals(): Record<'A' | 'B' | 'C' | 'total', number> {
-  const totals: Record<'A' | 'B' | 'C' | 'total', number> = {
+function computeTotals(state: DeckStorage): Record<Zone | 'total', number> {
+  const totals: Record<Zone | 'total', number> = {
     A: 0,
     B: 0,
     C: 0,
     total: 0
   };
 
-  cityMap.forEach((city) => {
+  Object.values(state.cities).forEach((city) => {
     totals.A += city.discard;
     totals.C += city.safe;
   });
 
-  for (const layer of hotLayers) {
-    layer.cards.forEach((count) => {
+  state.hotLayers.forEach((layer) => {
+    Object.values(layer.cards).forEach((count) => {
       totals.B += count;
     });
-  }
+  });
 
   totals.total = totals.A + totals.B + totals.C;
   return totals;
 }
 
-function buildZoneA(): ZoneCityCount[] {
-  const list: ZoneCityCount[] = cityOrder.map((key) => {
-    const city = cityMap.get(key);
+function buildZoneA(state: DeckStorage): ZoneCityCount[] {
+  const list = state.cityOrder.map((key) => {
+    const city = state.cities[key];
     if (!city) {
       throw new Error('도시 데이터를 찾을 수 없습니다.');
     }
@@ -128,9 +195,9 @@ function buildZoneA(): ZoneCityCount[] {
   return sortCities(list);
 }
 
-function buildZoneC(): ZoneCityCount[] {
-  const list: ZoneCityCount[] = cityOrder.map((key) => {
-    const city = cityMap.get(key);
+function buildZoneC(state: DeckStorage): ZoneCityCount[] {
+  const list = state.cityOrder.map((key) => {
+    const city = state.cities[key];
     if (!city) {
       throw new Error('도시 데이터를 찾을 수 없습니다.');
     }
@@ -144,14 +211,15 @@ function buildZoneC(): ZoneCityCount[] {
   return sortCities(list);
 }
 
-function buildZoneBLayers(): DeckLayer[] {
-  return hotLayers.map((layer, index) => {
+function buildZoneBLayers(state: DeckStorage): DeckLayer[] {
+  return state.hotLayers.map((layer, index) => {
     const cities = sortCities(
-      Array.from(layer.cards.entries()).map(([name, count]) => ({
+      Object.entries(layer.cards).map(([name, count]) => ({
         name,
         count
       }))
     );
+
     const total = cities.reduce((sum, city) => sum + city.count, 0);
 
     return {
@@ -163,96 +231,91 @@ function buildZoneBLayers(): DeckLayer[] {
   });
 }
 
-export function getDeckSnapshot(): DeckSnapshot {
+function buildSnapshot(state: DeckStorage): DeckSnapshot {
   return {
-    zoneA: buildZoneA(),
-    zoneBLayers: buildZoneBLayers(),
-    zoneC: buildZoneC(),
-    totals: computeTotals()
+    zoneA: buildZoneA(state),
+    zoneBLayers: buildZoneBLayers(state),
+    zoneC: buildZoneC(state),
+    totals: computeTotals(state)
   };
 }
 
-export function incrementDiscard(cityName: string) {
-  const city = ensureCityExists(cityName);
+export async function getDeckSnapshot(): Promise<DeckSnapshot> {
+  const state = await loadState();
+  return buildSnapshot(state);
+}
 
-  cleanupEmptyLayers();
+export async function incrementDiscard(cityName: string): Promise<DeckSnapshot> {
+  return updateState((state) => {
+    const city = ensureCityExists(state, cityName);
 
-  const topLayer = hotLayers[0];
-  if (topLayer) {
-    const current = topLayer.cards.get(city.name) ?? 0;
-    if (current <= 0) {
-      throw new Error(`현재 B1 층에 ${city.name} 카드가 없습니다.`);
-    }
-    if (current > 1) {
-      topLayer.cards.set(city.name, current - 1);
+    const topLayer = state.hotLayers[0];
+    if (topLayer) {
+      const current = topLayer.cards[city.name] ?? 0;
+      if (current <= 0) {
+        throw new Error(`현재 B1 층에 ${city.name} 카드가 없습니다.`);
+      }
+      if (current > 1) {
+        topLayer.cards[city.name] = current - 1;
+      } else {
+        delete topLayer.cards[city.name];
+      }
     } else {
-      topLayer.cards.delete(city.name);
+      if (city.safe <= 0) {
+        throw new Error(`${city.name} 도시에 남은 카드가 없습니다.`);
+      }
+      city.safe -= 1;
     }
-  } else {
+
+    city.discard += 1;
+  });
+}
+
+export async function triggerEpidemic(
+  cityName: string
+): Promise<DeckSnapshot> {
+  return updateState((state) => {
+    const city = ensureCityExists(state, cityName);
+
     if (city.safe <= 0) {
-      throw new Error(`${city.name} 도시에 남은 카드가 없습니다.`);
+      throw new Error(`${city.name} 도시에 C 영역 카드가 없습니다.`);
     }
+
     city.safe -= 1;
-  }
+    city.discard += 1;
 
-  city.discard += 1;
-  cleanupEmptyLayers();
-}
+    const newLayerCards: Record<string, number> = {};
 
-export function triggerEpidemic(cityName: string) {
-  const city = ensureCityExists(cityName);
+    Object.values(state.cities).forEach((entry) => {
+      if (entry.discard > 0) {
+        newLayerCards[entry.name] = entry.discard;
+        entry.discard = 0;
+      }
+    });
 
-  if (city.safe <= 0) {
-    throw new Error(`${city.name} 도시에 C 영역 카드가 없습니다.`);
-  }
+    const hasCards = Object.keys(newLayerCards).length > 0;
 
-  // Draw bottom card from C into discard (A)
-  city.safe -= 1;
-  city.discard += 1;
-
-  const newLayerCards = new Map<string, number>();
-
-  cityMap.forEach((entry) => {
-    if (entry.discard > 0) {
-      newLayerCards.set(entry.name, entry.discard);
-      entry.discard = 0;
+    if (!hasCards) {
+      throw new Error('전염 카드 처리 중 오류가 발생했습니다.');
     }
+
+    const layerId = state.nextLayerId;
+    state.nextLayerId += 1;
+    state.hotLayers.unshift({
+      id: layerId,
+      cards: newLayerCards
+    });
   });
+}
 
-  if (newLayerCards.size === 0) {
-    throw new Error('전염 카드 처리 중 오류가 발생했습니다.');
-  }
-
-  const layerId = nextLayerId;
-  nextLayerId += 1;
-  hotLayers.unshift({
-    id: layerId,
-    cards: newLayerCards
+export async function addCity(cityName: string): Promise<DeckSnapshot> {
+  return updateState((state) => {
+    ensureCityExists(state, cityName);
   });
-
-  cleanupEmptyLayers();
 }
 
-export function addCity(cityName: string) {
-  const key = normaliseCityName(cityName);
-
-  if (!key) {
-    throw new Error('도시 이름이 필요합니다.');
-  }
-
-  if (cityMap.has(key)) {
-    return;
-  }
-
-  ensureCityExists(key);
+export async function resetDeckState(): Promise<DeckSnapshot> {
+  const state = createInitialState();
+  await saveState(state);
+  return buildSnapshot(state);
 }
-
-export function resetDeckState() {
-  cityMap.clear();
-  cityOrder.length = 0;
-  hotLayers.length = 0;
-  nextLayerId = 1;
-  INITIAL_CITIES.forEach((city) => ensureCityExists(city));
-}
-
-resetDeckState();

@@ -129,6 +129,24 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     []
   );
 
+  const handleReset = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+    setIsBusy(true);
+    setError(null);
+    try {
+      const updated = await mutateDeck('/api/deck/reset', {});
+      setDeck(updated);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : '덱을 초기화할 수 없습니다.'
+      );
+    } finally {
+      setIsBusy(false);
+    }
+  }, [isBusy]);
+
   const handleEpidemic = useCallback(
     async (cityName: string) => {
       setIsBusy(true);
@@ -200,6 +218,13 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             aria-label="최신 상태로 새로고침"
           >
             {isRefreshing ? '갱신 중…' : '새로고침'}
+          </button>
+          <button
+            className="resetButton"
+            onClick={() => void handleReset()}
+            disabled={isBusy}
+          >
+            덱 초기화
           </button>
         </div>
       </header>

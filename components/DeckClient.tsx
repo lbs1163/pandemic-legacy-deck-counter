@@ -2,7 +2,7 @@
 
 import type { DeckSnapshot } from '@/lib/deckState';
 import type { FormEvent } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type DeckData = DeckSnapshot;
 
@@ -75,18 +75,43 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   const [isEpidemicOpen, setIsEpidemicOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newCityName, setNewCityName] = useState('');
+  const latestRequestId = useRef(0);
+
+  const startRequest = useCallback(() => {
+    latestRequestId.current += 1;
+    return latestRequestId.current;
+  }, []);
+
+  const applySnapshot = useCallback(
+    (snapshot: DeckData, requestId: number) => {
+      if (requestId === latestRequestId.current) {
+        setDeck(snapshot);
+      }
+    },
+    []
+  );
+
+  const applyError = useCallback((message: string | null, requestId: number) => {
+    if (requestId === latestRequestId.current) {
+      setError(message);
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
+    const requestId = startRequest();
     setIsRefreshing(true);
     try {
       const snapshot = await readSnapshot();
-      setDeck(snapshot);
+      applySnapshot(snapshot, requestId);
+      applyError(null, requestId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '덱을 갱신할 수 없습니다.');
+      const message =
+        err instanceof Error ? err.message : '덱을 갱신할 수 없습니다.';
+      applyError(message, requestId);
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [applyError, applySnapshot, startRequest]);
 
   useEffect(() => {
     void refresh();
@@ -111,61 +136,64 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
   const handleIncrement = useCallback(
     async (cityName: string) => {
+      const requestId = startRequest();
       setIsBusy(true);
-      setError(null);
+      applyError(null, requestId);
       try {
         const updated = await mutateDeck('/api/deck/increment', {
           city: cityName
         });
-        setDeck(updated);
+        applySnapshot(updated, requestId);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : '카드를 증가시킬 수 없습니다.'
-        );
+        const message =
+          err instanceof Error ? err.message : '카드를 증가시킬 수 없습니다.';
+        applyError(message, requestId);
       } finally {
         setIsBusy(false);
       }
     },
-    []
+    [applyError, applySnapshot, startRequest]
   );
 
   const handleReset = useCallback(async () => {
     if (isBusy) {
       return;
     }
+    const requestId = startRequest();
     setIsBusy(true);
-    setError(null);
+    applyError(null, requestId);
     try {
       const updated = await mutateDeck('/api/deck/reset', {});
-      setDeck(updated);
+      applySnapshot(updated, requestId);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : '덱을 초기화할 수 없습니다.'
-      );
+      const message =
+        err instanceof Error ? err.message : '덱을 초기화할 수 없습니다.';
+      applyError(message, requestId);
     } finally {
       setIsBusy(false);
     }
-  }, [isBusy]);
+  }, [applyError, applySnapshot, isBusy, startRequest]);
 
   const handleEpidemic = useCallback(
     async (cityName: string) => {
+      const requestId = startRequest();
       setIsBusy(true);
-      setError(null);
+      applyError(null, requestId);
       try {
         const updated = await mutateDeck('/api/deck/epidemic', {
           city: cityName
         });
-        setDeck(updated);
+        applySnapshot(updated, requestId);
         setIsEpidemicOpen(false);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : '전염 카드를 처리할 수 없습니다.'
-        );
+        const message =
+          err instanceof Error ? err.message : '전염 카드를 처리할 수 없습니다.';
+        applyError(message, requestId);
       } finally {
         setIsBusy(false);
       }
     },
-    []
+    [applyError, applySnapshot, startRequest]
   );
 
   const handleAddCity = useCallback(
@@ -175,25 +203,26 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       if (!trimmed) {
         return;
       }
+      const requestId = startRequest();
       setIsBusy(true);
-      setError(null);
+      applyError(null, requestId);
       try {
         const updated = await mutateDeck('/api/deck/cities', {
           city: trimmed
         });
-        setDeck(updated);
+        applySnapshot(updated, requestId);
         setNewCityName('');
       } catch (err) {
-        setError(
+        const message =
           err instanceof Error
             ? err.message
-            : '새 도시를 추가할 수 없습니다.'
-        );
+            : '새 도시를 추가할 수 없습니다.';
+        applyError(message, requestId);
       } finally {
         setIsBusy(false);
       }
     },
-    [newCityName]
+    [applyError, applySnapshot, newCityName, startRequest]
   );
 
   return (

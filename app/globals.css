@@ -1,0 +1,315 @@
+:root {
+  color-scheme: light;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background-color: #0a0a0a;
+  color: #f4f4f4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #111;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pageTitle {
+  font-size: 1.6rem;
+  margin: 0 0 4px;
+}
+
+.pageSubtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #9ca3af;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.epidemicButton,
+.refreshButton,
+.addButton,
+.newCityForm button,
+.closeOverlay {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 600;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.epidemicButton {
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: #fff;
+}
+
+.refreshButton {
+  background-color: transparent;
+  color: #9ca3af;
+  border: 1px solid #374151;
+}
+
+.epidemicButton:disabled,
+.refreshButton:disabled,
+.addButton:disabled,
+.newCityForm button:disabled,
+.closeOverlay:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.epidemicButton:not(:disabled):active,
+.refreshButton:not(:disabled):active,
+.addButton:not(:disabled):active,
+.newCityForm button:not(:disabled):active,
+.closeOverlay:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.totalItem {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left-width: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background-color: rgba(31, 41, 55, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.totalLabel {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.totalValue {
+  font-size: 1.5rem;
+}
+
+.errorBanner {
+  margin: 0;
+  padding: 12px 16px;
+  color: #fecaca;
+  background-color: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 12px;
+}
+
+.zones {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.zoneCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 4px;
+  border-radius: 14px;
+  background: rgba(17, 24, 39, 0.75);
+  padding: 16px 18px;
+  backdrop-filter: blur(12px);
+}
+
+.zoneHeader h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.zoneHeader p {
+  margin: 4px 0 12px;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.zoneList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zoneListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(31, 41, 55, 0.6);
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.zoneCityText {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cityName {
+  font-weight: 600;
+}
+
+.cityCount {
+  font-size: 0.95rem;
+  color: #d1d5db;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.countUnit {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.addButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: white;
+}
+
+.newCitySection {
+  background: rgba(17, 24, 39, 0.75);
+  border-radius: 14px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.newCitySection h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.newCityForm {
+  display: flex;
+  gap: 12px;
+}
+
+.newCityForm input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid #374151;
+  background-color: rgba(31, 41, 55, 0.6);
+  padding: 10px 16px;
+  color: #e5e7eb;
+}
+
+.newCityForm input:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.overlayCard {
+  background: #111827;
+  border-radius: 18px;
+  padding: 20px;
+  width: min(100%, 420px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.overlayCard header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.overlayCard header p {
+  margin: 6px 0 0;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.candidateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.candidateList li button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(31, 41, 55, 0.6);
+  color: inherit;
+}
+
+.closeOverlay {
+  align-self: flex-end;
+  background: transparent;
+  color: #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.emptyMessage {
+  margin: 0;
+  color: #9ca3af;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .zoneListItem:hover {
+    background: rgba(37, 47, 66, 0.75);
+  }
+
+  .candidateList li button:hover {
+    border-color: rgba(96, 165, 250, 0.6);
+  }
+}

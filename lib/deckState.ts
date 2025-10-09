@@ -29,6 +29,7 @@ export interface DeckLayer {
 }
 
 export interface DeckSnapshot {
+  revision: number;
   zoneA: ZoneCityCount[];
   zoneBLayers: DeckLayer[];
   zoneC: ZoneCityCount[];
@@ -51,6 +52,7 @@ type DeckStorage = {
   cities: Record<string, CityState>;
   hotLayers: HotLayer[];
   nextLayerId: number;
+  revision: number;
 };
 
 type StateMutation = (state: DeckStorage) => void;
@@ -61,6 +63,17 @@ const hasKv =
   typeof process.env.UPSTASH_REDIS_REST_URL === 'string';
 
 let memoryState: DeckStorage | null = null;
+// Serialise state operations so concurrent requests cannot overwrite each other.
+let stateQueue: Promise<void> = Promise.resolve();
+
+function enqueueStateWork<T>(work: () => Promise<T>): Promise<T> {
+  const run = stateQueue.then(work, work);
+  stateQueue = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+}
 
 function cloneState<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -75,29 +88,62 @@ function createInitialState(): DeckStorage {
     cityOrder: [],
     cities: {},
     hotLayers: [],
-    nextLayerId: 1
+    nextLayerId: 1,
+    revision: 0
   };
 
   INITIAL_CITIES.forEach((city) => ensureCityExists(state, city));
   return state;
 }
 
+function ensureStateShape(raw: unknown): DeckStorage {
+  const state = raw as DeckStorage & {
+    revision?: number;
+    nextLayerId?: number;
+    cityOrder?: string[];
+    cities?: Record<string, CityState>;
+    hotLayers?: HotLayer[];
+  };
+
+  if (!Array.isArray(state.cityOrder)) {
+    state.cityOrder = [];
+  }
+
+  if (!state.cities || typeof state.cities !== 'object') {
+    state.cities = {};
+  }
+
+  if (!Array.isArray(state.hotLayers)) {
+    state.hotLayers = [];
+  }
+
+  if (typeof state.nextLayerId !== 'number' || state.nextLayerId < 1) {
+    state.nextLayerId = 1;
+  }
+
+  if (typeof state.revision !== 'number' || !Number.isFinite(state.revision)) {
+    state.revision = 0;
+  }
+
+  return state as DeckStorage;
+}
+
 async function loadState(): Promise<DeckStorage> {
   if (hasKv) {
     const stored = await kv.get<DeckStorage>(KV_DECK_KEY);
     if (stored) {
-      return cloneState(stored);
+      return ensureStateShape(cloneState(stored));
     }
     const initial = createInitialState();
     await kv.set(KV_DECK_KEY, initial);
-    return cloneState(initial);
+    return ensureStateShape(cloneState(initial));
   }
 
   if (!memoryState) {
     memoryState = createInitialState();
   }
 
-  return cloneState(memoryState);
+  return ensureStateShape(cloneState(memoryState));
 }
 
 async function saveState(state: DeckStorage) {
@@ -110,11 +156,14 @@ async function saveState(state: DeckStorage) {
 }
 
 async function updateState(mutator: StateMutation): Promise<DeckSnapshot> {
-  const state = await loadState();
-  mutator(state);
-  cleanupEmptyLayers(state);
-  await saveState(state);
-  return buildSnapshot(state);
+  return enqueueStateWork(async () => {
+    const state = await loadState();
+    mutator(state);
+    cleanupEmptyLayers(state);
+    state.revision += 1;
+    await saveState(state);
+    return buildSnapshot(state);
+  });
 }
 
 function ensureCityExists(state: DeckStorage, name: string) {
@@ -233,6 +282,7 @@ function buildZoneBLayers(state: DeckStorage): DeckLayer[] {
 
 function buildSnapshot(state: DeckStorage): DeckSnapshot {
   return {
+    revision: state.revision,
     zoneA: buildZoneA(state),
     zoneBLayers: buildZoneBLayers(state),
     zoneC: buildZoneC(state),
@@ -241,8 +291,10 @@ function buildSnapshot(state: DeckStorage): DeckSnapshot {
 }
 
 export async function getDeckSnapshot(): Promise<DeckSnapshot> {
-  const state = await loadState();
-  return buildSnapshot(state);
+  return enqueueStateWork(async () => {
+    const state = await loadState();
+    return buildSnapshot(state);
+  });
 }
 
 export async function incrementDiscard(cityName: string): Promise<DeckSnapshot> {
@@ -315,7 +367,11 @@ export async function addCity(cityName: string): Promise<DeckSnapshot> {
 }
 
 export async function resetDeckState(): Promise<DeckSnapshot> {
-  const state = createInitialState();
-  await saveState(state);
-  return buildSnapshot(state);
+  return enqueueStateWork(async () => {
+    const current = await loadState();
+    const state = createInitialState();
+    state.revision = current.revision + 1;
+    await saveState(state);
+    return buildSnapshot(state);
+  });
 }

@@ -84,9 +84,17 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
   const applySnapshot = useCallback(
     (snapshot: DeckData, requestId: number) => {
-      if (requestId === latestRequestId.current) {
-        setDeck(snapshot);
+      if (requestId !== latestRequestId.current) {
+        return;
       }
+
+      setDeck((current) => {
+        if (!current || snapshot.revision >= current.revision) {
+          return snapshot;
+        }
+
+        return current;
+      });
     },
     []
   );

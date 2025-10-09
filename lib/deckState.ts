@@ -97,15 +97,15 @@ function computeTotals(): Record<'A' | 'B' | 'C' | 'total', number> {
     total: 0
   };
 
-  for (const city of cityMap.values()) {
+  cityMap.forEach((city) => {
     totals.A += city.discard;
     totals.C += city.safe;
-  }
+  });
 
   for (const layer of hotLayers) {
-    for (const count of layer.cards.values()) {
+    layer.cards.forEach((count) => {
       totals.B += count;
-    }
+    });
   }
 
   totals.total = totals.A + totals.B + totals.C;
@@ -212,13 +212,12 @@ export function triggerEpidemic(cityName: string) {
 
   const newLayerCards = new Map<string, number>();
 
-  for (const entry of cityMap.values()) {
-    console.log(entry);
+  cityMap.forEach((entry) => {
     if (entry.discard > 0) {
       newLayerCards.set(entry.name, entry.discard);
       entry.discard = 0;
     }
-  }
+  });
 
   if (newLayerCards.size === 0) {
     throw new Error('전염 카드 처리 중 오류가 발생했습니다.');

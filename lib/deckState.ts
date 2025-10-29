@@ -409,9 +409,11 @@ function drawFromTopPile(state: GameState, isEpidemic?: boolean) {
   }
 
   // Last card should be epidemic card
-  if (state.playerPiles[idx] == 1 && idx + state.playerEpidemicCounts >= INITIAL_EPIDEMIC_COUNTS)
-    if (isEpidemic != true)
+  if (state.playerPiles[idx] == 1) {
+    const drawedEpidemicCards = INITIAL_EPIDEMIC_COUNTS - state.playerEpidemicCounts;
+    if (drawedEpidemicCards < idx && isEpidemic != true)
       throw new Error('현재 남은 장수 상 전염 카드가 나와야 합니다.');
+  }
 
   state.playerPiles[idx] -= 1;
 }

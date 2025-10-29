@@ -92,6 +92,7 @@ type GameState = {
   playerPiles: number[];
   playerCityCounts: CityCardsSnapshot[];
   playerEventCounts: number;
+  playerEpidemicCounts: number;
 };
 
 // Total data for DB storage, contains state history
@@ -109,6 +110,7 @@ export interface GameSnapshot {
   playerPiles: number[];
   playerCityCounts: CityCardsSnapshot[];
   playerEventCounts: number;
+  playerEpidemicCounts: number;
 }
 
 type StateMutation = (state: GameState) => GameState;
@@ -150,10 +152,10 @@ function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?
   const remaining = cityCards + eventCount + epidemicCards - initialDraws;
   
   // Split remaining into 5 piles as evenly as possible, larger piles on top
-  const base = Math.floor(remaining / 5);
-  let extra = remaining % 5;
+  const base = Math.floor(remaining / epidemicCards);
+  let extra = remaining % epidemicCards;
   const fivePiles: number[] = [];
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < epidemicCards; i += 1) {
     const size = base + (extra > 0 ? 1 : 0);
     if (extra > 0) extra -= 1;
     fivePiles.push(size + 1); // +1 epidemic per pile
@@ -177,6 +179,7 @@ function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?
       count: cityInfo.playerCardsCount
     })),
     playerEventCounts: eventCount,
+    playerEpidemicCounts: epidemicCards,
   };
 
   return state;
@@ -310,7 +313,7 @@ function buildZoneD(state: GameState): CityCardsSnapshot[] {
 }
 
 function buildZoneBLayers(state: GameState): CityCardsSnapshot[][] {
-  return cloneState(state.zoneBLayers);
+  return cloneState(state.zoneBLayers).map((cityState) => sortCities(cityState));
 }
 
 function buildSnapshot(state: GameState): GameSnapshot {
@@ -324,6 +327,7 @@ function buildSnapshot(state: GameState): GameSnapshot {
     playerPiles: cloneState(state.playerPiles),
     playerCityCounts: sortCities(state.playerCityCounts),
     playerEventCounts: state.playerEventCounts,
+    playerEpidemicCounts: state.playerEpidemicCounts,
   };
 }
 
@@ -443,6 +447,10 @@ export async function drawPlayerEvent(): Promise<GameSnapshot> {
 
 export async function drawPlayerEpidemic(bottomInfectionCityCard: string): Promise<GameSnapshot> {
   return updateState((state) => {
+    if (state.playerEpidemicCounts <= 0) {
+      throw new Error('남은 전염 카드가 없습니다.');
+    }
+
     const cityState = getInfectionCityCardsState(state, bottomInfectionCityCard);
 
     if (cityState.safe <= 0) {
@@ -469,6 +477,7 @@ export async function drawPlayerEpidemic(bottomInfectionCityCard: string): Promi
     state.zoneBLayers = [newLayerCards, ...state.zoneBLayers];
 
     drawFromTopPile(state);
+    state.playerEpidemicCounts -= 1;
 
     return state;
   });

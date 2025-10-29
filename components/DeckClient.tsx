@@ -178,6 +178,9 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     [deck.zoneC]
   );
 
+  const canTriggerEpidemic =
+    deck.playerEpidemicCounts > 0 && epidemicCandidates.length > 0;
+
   const handleIncrement = useCallback(
     async (cityName: string) => {
       const requestId = startRequest();
@@ -338,7 +341,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           <button
             className="epidemicButton"
             onClick={() => setIsEpidemicOpen(true)}
-            disabled={isBusy || epidemicCandidates.length === 0}
+            disabled={isBusy || !canTriggerEpidemic}
           >
             전염 카드 발동
           </button>
@@ -364,7 +367,8 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             disabled={isBusy}
           >
             새 게임
-          </button>          <button
+          </button>
+          <button
             className="resetButton"
             onClick={() => void handleFullReset()}
             disabled={isBusy}
@@ -451,6 +455,23 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                   onClick={() => void handleDrawEvent()}
                   disabled={isBusy || (deck.playerEventCounts ?? 0) <= 0}
                   aria-label="이벤트 카드 드로우"
+                >
+                  -
+                </button>
+              </li>
+              <li className="zoneListItem">
+                <div className="zoneCityText">
+                  <span className="cityName">전염 카드</span>
+                  <span className="cityCount">
+                    {deck.playerEpidemicCounts}
+                    <span className="countUnit">장</span>
+                  </span>
+                </div>
+                <button
+                  className="addButton"
+                  onClick={() => setIsEpidemicOpen(true)}
+                  disabled={isBusy || !canTriggerEpidemic}
+                  aria-label="전염 카드 드로우"
                 >
                   -
                 </button>

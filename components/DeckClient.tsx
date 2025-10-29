@@ -419,169 +419,143 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
       {error && <p className="errorBanner">{error}</p>}
 
-      <section className="playerCards">
-        <div className="zoneCard" style={{ borderColor: '#8b5cf6' }}>
-          <header className="zoneHeader">
-            <h2>플레이어 카드</h2>
-            <p>이벤트와 도시 카드 잔여를 추적합니다.</p>
-          </header>
-          <ul className="zoneList">
-            <li className="zoneListItem">
-              <div className="zoneCityText">
-                <span className="cityName">이벤트</span>
-                <span className="cityCount">
-                  {deck.playerEventsRemaining ?? 0}
-                  <span className="countUnit">장</span>
-                </span>
-              </div>
-              <button
-                className="addButton"
-                onClick={() => void handleDrawEvent()}
-                disabled={isBusy || (deck.playerEventsRemaining ?? 0) <= 0}
-                aria-label="이벤트 카드 드로우"
-              >
-                -
-              </button>
-            </li>
-            {playerCityList.map((city) => (
-              <li key={`PC-${city.name}`} className="zoneListItem">
+      <div className="playerZonesLayout">
+        <section className="playerCards">
+          <div className="zoneCard" style={{ borderColor: '#8b5cf6' }}>
+            <header className="zoneHeader">
+              <h2>플레이어 카드</h2>
+              <p>이벤트와 도시 카드 잔여를 추적합니다.</p>
+            </header>
+            <ul className="zoneList">
+              <li className="zoneListItem">
                 <div className="zoneCityText">
-                  <span className="cityName">{city.name}</span>
+                  <span className="cityName">이벤트</span>
                   <span className="cityCount">
-                    {city.count}
+                    {deck.playerEventsRemaining ?? 0}
                     <span className="countUnit">장</span>
                   </span>
                 </div>
                 <button
                   className="addButton"
-                  onClick={() => void handleDrawCity(city.name)}
-                  disabled={isBusy}
-                  aria-label={`${city.name} 도시 카드 드로우`}
+                  onClick={() => void handleDrawEvent()}
+                  disabled={isBusy || (deck.playerEventsRemaining ?? 0) <= 0}
+                  aria-label="이벤트 카드 드로우"
                 >
                   -
                 </button>
               </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section className="zones">
-        <div
-          className="zoneCard"
-          style={{ borderColor: ZONE_INFO.A.accent }}
-        >
-          <header className="zoneHeader">
-            <h2>{ZONE_INFO.A.title}</h2>
-            <p>{ZONE_INFO.A.description}</p>
-          </header>
-
-          <ul className="zoneList">
-            {deck.zoneA.map((city) => (
-              <li key={`A-${city.name}`} className="zoneListItem">
-                <div className="zoneCityText">
-                  <span className="cityName">{city.name}</span>
-                  <span className="cityCount">
-                    {city.count}
-                    <span className="countUnit">장</span>
-                  </span>
-                </div>
-                <button
-                  className="addButton"
-                  onClick={() => void handleIncrement(city.name)}
-                  disabled={isBusy}
-                >
-                  +
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div
-          className="zoneCard"
-          style={{ borderColor: ZONE_INFO.B.accent }}
-        >
-          <header className="zoneHeader">
-            <h2>{ZONE_INFO.B.title}</h2>
-            <p>{ZONE_INFO.B.description}</p>
-          </header>
-
-          {deck.zoneBLayers.length === 0 ? (
-            <p className="emptyMessage">B 영역에 카드가 없습니다.</p>
-          ) : (
-            <div className="layerList">
-              {deck.zoneBLayers.map((layer, index) => {
-                const layerLabel =
-                  index === 0 ? 'B1 · 상단' : `B${index + 1}`;
-                return (
-                  <div key={index} className="layerBlock">
-                    <div className="layerHeader">
-                      <span>{layerLabel}</span>
-                      <span>{1}장</span>
-                    </div>
-                    <ul className="zoneList">
-                      {layer.map((city) => (
-                        <li
-                          key={`B${index + 1}-${city.name}`}
-                          className="zoneListItem"
-                        >
-                          <div className="zoneCityText">
-                            <span className="cityName">{city.name}</span>
-                            <span className="cityCount">
-                              {city.count}
-                              <span className="countUnit">장</span>
-                            </span>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+              {playerCityList.map((city) => (
+                <li key={`PC-${city.name}`} className="zoneListItem">
+                  <div className="zoneCityText">
+                    <span className="cityName">{city.name}</span>
+                    <span className="cityCount">
+                      {city.count}
+                      <span className="countUnit">장</span>
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  <button
+                    className="addButton"
+                    onClick={() => void handleDrawCity(city.name)}
+                    disabled={isBusy}
+                    aria-label={`${city.name} 도시 카드 드로우`}
+                  >
+                    -
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
 
-        <div
-          className="zoneCard"
-          style={{ borderColor: ZONE_INFO.C.accent }}
-        >
-          <header className="zoneHeader">
-            <h2>{ZONE_INFO.C.title}</h2>
-            <p>{ZONE_INFO.C.description}</p>
-          </header>
+        <section className="zones">
+          <div
+            className="zoneCard"
+            style={{ borderColor: ZONE_INFO.A.accent }}
+          >
+            <header className="zoneHeader">
+              <h2>{ZONE_INFO.A.title}</h2>
+              <p>{ZONE_INFO.A.description}</p>
+            </header>
 
-          <ul className="zoneList">
-            {deck.zoneC.map((city) => (
-              <li key={`C-${city.name}`} className="zoneListItem">
-                <div className="zoneCityText">
-                  <span className="cityName">{city.name}</span>
-                  <span className="cityCount">
-                    {city.count}
-                    <span className="countUnit">장</span>
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div
-          className="zoneCard"
-          style={{ borderColor: ZONE_INFO.D.accent }}
-        >
-          <header className="zoneHeader">
-            <h2>{ZONE_INFO.D.title}</h2>
-            <p>{ZONE_INFO.D.description}</p>
-          </header>
-
-          {deck.zoneD.length === 0 ? (
-            <p className="emptyMessage">표시할 카드가 없습니다.</p>
-          ) : (
             <ul className="zoneList">
-              {deck.zoneD.map((city) => (
-                <li key={`D-${city.name}`} className="zoneListItem">
+              {deck.zoneA.map((city) => (
+                <li key={`A-${city.name}`} className="zoneListItem">
+                  <div className="zoneCityText">
+                    <span className="cityName">{city.name}</span>
+                    <span className="cityCount">
+                      {city.count}
+                      <span className="countUnit">장</span>
+                    </span>
+                  </div>
+                  <button
+                    className="addButton"
+                    onClick={() => void handleIncrement(city.name)}
+                    disabled={isBusy}
+                  >
+                    +
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div
+            className="zoneCard"
+            style={{ borderColor: ZONE_INFO.B.accent }}
+          >
+            <header className="zoneHeader">
+              <h2>{ZONE_INFO.B.title}</h2>
+              <p>{ZONE_INFO.B.description}</p>
+            </header>
+
+            {deck.zoneBLayers.length === 0 ? (
+              <p className="emptyMessage">B 영역에 카드가 없습니다.</p>
+            ) : (
+              <div className="layerList">
+                {deck.zoneBLayers.map((layer, index) => {
+                  const layerLabel =
+                    index === 0 ? 'B1 · 상단' : `B${index + 1}`;
+                  return (
+                    <div key={index} className="layerBlock">
+                      <div className="layerHeader">
+                        <span>{layerLabel}</span>
+                        <span>{1}장</span>
+                      </div>
+                      <ul className="zoneList">
+                        {layer.map((city) => (
+                          <li
+                            key={`B${index + 1}-${city.name}`}
+                            className="zoneListItem"
+                          >
+                            <div className="zoneCityText">
+                              <span className="cityName">{city.name}</span>
+                              <span className="cityCount">
+                                {city.count}
+                                <span className="countUnit">장</span>
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div
+            className="zoneCard"
+            style={{ borderColor: ZONE_INFO.C.accent }}
+          >
+            <header className="zoneHeader">
+              <h2>{ZONE_INFO.C.title}</h2>
+              <p>{ZONE_INFO.C.description}</p>
+            </header>
+
+            <ul className="zoneList">
+              {deck.zoneC.map((city) => (
+                <li key={`C-${city.name}`} className="zoneListItem">
                   <div className="zoneCityText">
                     <span className="cityName">{city.name}</span>
                     <span className="cityCount">
@@ -592,9 +566,37 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-      </section>
+          </div>
+
+          <div
+            className="zoneCard"
+            style={{ borderColor: ZONE_INFO.D.accent }}
+          >
+            <header className="zoneHeader">
+              <h2>{ZONE_INFO.D.title}</h2>
+              <p>{ZONE_INFO.D.description}</p>
+            </header>
+
+            {deck.zoneD.length === 0 ? (
+              <p className="emptyMessage">표시할 카드가 없습니다.</p>
+            ) : (
+              <ul className="zoneList">
+                {deck.zoneD.map((city) => (
+                  <li key={`D-${city.name}`} className="zoneListItem">
+                    <div className="zoneCityText">
+                      <span className="cityName">{city.name}</span>
+                      <span className="cityCount">
+                        {city.count}
+                        <span className="countUnit">장</span>
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      </div>
 
       {isEpidemicOpen && (
         <div className="overlay" role="dialog" aria-modal="true">

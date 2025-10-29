@@ -135,6 +135,12 @@ button {
   border-radius: 12px;
 }
 
+.playerZonesLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .zones {
   display: flex;
   flex-direction: column;
@@ -254,7 +260,9 @@ button {
 
 .newCityForm {
   display: flex;
+  flex-direction: column;
   gap: 12px;
+  align-items: stretch;
 }
 
 .newCityForm input {
@@ -264,6 +272,10 @@ button {
   background-color: rgba(31, 41, 55, 0.6);
   padding: 10px 16px;
   color: #e5e7eb;
+}
+
+.newCityForm button {
+  width: 100%;
 }
 
 .newCityForm input:focus {
@@ -349,5 +361,33 @@ button {
 
   .layerBlock:hover {
     border-color: rgba(251, 146, 60, 0.6);
+  }
+}
+
+@media (min-width: 640px) {
+  .newCityForm {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .newCityForm button {
+    width: auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page {
+    max-width: 1180px;
+  }
+
+  .playerZonesLayout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-items: start;
+  }
+
+  .playerCards .zoneCard {
+    height: 100%;
   }
 }

@@ -63,7 +63,7 @@ const INITIAL_CITIES: CityInfo[] = [
   },
 ];
 
-type CityColor = 'Red' | 'Blue' | 'Yellow' | 'Black';
+export type CityColor = 'Red' | 'Blue' | 'Yellow' | 'Black';
 
 export type CityInfo = {
   name: string;
@@ -264,7 +264,7 @@ function cleanupEmptyLayers(state: GameState) {
   }
 }
 
-const CITY_COLOR_PRIORITY = new Map(
+export const CITY_COLOR_PRIORITY = new Map(
   CITY_COLOR_ORDER.map((color, index) => [color, index] as const)
 );
 

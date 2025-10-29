@@ -8,6 +8,7 @@ import {
 } from '@/lib/deckState';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { calculateProbs, CityProbability } from './utils';
 
 type DeckData = GameSnapshot;
 
@@ -105,6 +106,8 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   const [newCityName, setNewCityName] = useState('');
   const [newCityCount, setNewCityCount] = useState<string>('');
   const [newCityColor, setNewCityColor] = useState<CityColor>(CITY_COLOR_ORDER[0]);
+  const [predictEpidemic, setPredictEpidemic] = useState<boolean>(false);
+  const [numDraw, setNumDraw] = useState<number>(2);
   const latestRequestId = useRef(0);
 
   const startRequest = useCallback(() => {
@@ -245,6 +248,17 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     });
     return formatter.format(epidemicProbability);
   }, [epidemicProbability]);
+
+  const cityProbabilities = useMemo(() => {
+    let cityProbs = calculateProbs([deck.zoneA, ...deck.zoneBLayers, deck.zoneC], numDraw);
+
+    return {
+      nonEpidemic: cityProbs,
+      epidemic: cityProbs,
+    };
+  }, [deck.zoneA, deck.zoneBLayers, deck.zoneC, numDraw]);
+
+  const showingCityProbabilities: CityProbability[] = predictEpidemic ? cityProbabilities.epidemic : cityProbabilities.nonEpidemic;
 
   const cityInfoMap = useMemo(() => {
     const entries = new Map<string, CityInfo>();
@@ -566,9 +580,9 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
       <div className="playerZonesLayout">
         <section>
-          <div className="playerPileSummary">
-            <span className="playerPileTitle">플레이어 카드 덱 더미</span>
-            <p className="epidemicProbability">
+          <div className="deckSummary">
+            <span className="deckSummaryTitle">플레이어 카드 덱 더미</span>
+            <p className="probability">
               다음 2장 중 전염 카드가 등장할 확률 <strong>{epidemicProbabilityLabel}</strong>
             </p>
             <div className="playerPileGrid">
@@ -601,6 +615,16 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                 <span className="colorCount">{playerCityColorTotals[color]} 장</span>
               </div>
             ))}
+          </div>
+        </section>
+        <section>
+          <div className="deckSummary">
+            <span className="deckSummaryTitle">감염 카드 덱 더미</span>
+            <p className="probability">
+              다음 2장 중 전염 카드가 등장할 확률표
+            </p>
+            {/** TODO: Add table for probability */}
+            {/** use `showingCityProbabilities` variable and make table */}
           </div>
         </section>
       </div>

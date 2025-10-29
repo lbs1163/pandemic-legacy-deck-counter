@@ -1,10 +1,10 @@
 'use client';
 
-import type { DeckSnapshot } from '@/lib/deckState';
+import type { GameSnapshot } from '@/lib/deckState';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-type DeckData = DeckSnapshot;
+type DeckData = GameSnapshot;
 
 const ZONE_INFO = {
   A: {
@@ -178,6 +178,15 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     [deck.zoneC]
   );
 
+  const playerCityList = useMemo(
+    () =>
+      Object.entries(deck.playerCityCounts ?? {})
+        .map(([name, count]) => ({ name, count: Number(count) || 0 }))
+        .filter((c) => c.count > 0)
+        .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name, 'ko')),
+    [deck.playerCityCounts]
+  );
+
   const handleIncrement = useCallback(
     async (cityName: string) => {
       const requestId = startRequest();
@@ -257,6 +266,39 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     [applyError, applySnapshot, startRequest]
   );
 
+  const handleDrawEvent = useCallback(async () => {
+    const requestId = startRequest();
+    setIsBusy(true);
+    applyError(null, requestId);
+    try {
+      const updated = await mutateDeck('/api/deck/player/draw/event', {});
+      applySnapshot(updated, requestId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '이벤트 드로우 실패';
+      applyError(message, requestId);
+    } finally {
+      setIsBusy(false);
+    }
+  }, [applyError, applySnapshot, startRequest]);
+
+  const handleDrawCity = useCallback(
+    async (cityName: string) => {
+      const requestId = startRequest();
+      setIsBusy(true);
+      applyError(null, requestId);
+      try {
+        const updated = await mutateDeck('/api/deck/player/draw/city', { city: cityName });
+        applySnapshot(updated, requestId);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '도시 카드 드로우 실패';
+        applyError(message, requestId);
+      } finally {
+        setIsBusy(false);
+      }
+    },
+    [applyError, applySnapshot, startRequest]
+  );
+
   const handleAddCity = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -295,6 +337,52 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
   return (
     <main className="page">
+      <section className="playerCards">
+        <div className="zoneCard" style={{ borderColor: '#8b5cf6' }}>
+          <header className="zoneHeader">
+            <h2>플레이어 카드</h2>
+            <p>이벤트와 도시 카드 잔여를 추적합니다.</p>
+          </header>
+          <ul className="zoneList">
+            <li className="zoneListItem">
+              <div className="zoneCityText">
+                <span className="cityName">이벤트</span>
+                <span className="cityCount">
+                  {deck.playerEventsRemaining ?? 0}
+                  <span className="countUnit">장</span>
+                </span>
+              </div>
+              <button
+                className="addButton"
+                onClick={() => void handleDrawEvent()}
+                disabled={isBusy || (deck.playerEventsRemaining ?? 0) <= 0}
+                aria-label="이벤트 카드 드로우"
+              >
+                -
+              </button>
+            </li>
+            {playerCityList.map((city) => (
+              <li key={`PC-${city.name}`} className="zoneListItem">
+                <div className="zoneCityText">
+                  <span className="cityName">{city.name}</span>
+                  <span className="cityCount">
+                    {city.count}
+                    <span className="countUnit">장</span>
+                  </span>
+                </div>
+                <button
+                  className="addButton"
+                  onClick={() => void handleDrawCity(city.name)}
+                  disabled={isBusy}
+                  aria-label={`${city.name} 도시 카드 드로우`}
+                >
+                  -
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
       <header className="pageHeader">
         <div>
           <h1 className="pageTitle">판데믹 레거시 S2 감염 덱</h1>
@@ -339,21 +427,6 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           </button>
         </div>
       </header>
-
-      <section className="totals">
-        <div className="totalItem" style={{ borderColor: ZONE_INFO.A.accent }}>
-          <span className="totalLabel">{ZONE_INFO.A.title}</span>
-          <strong className="totalValue">{deck.totals.A}</strong>
-        </div>
-        <div className="totalItem" style={{ borderColor: ZONE_INFO.B.accent }}>
-          <span className="totalLabel">{ZONE_INFO.B.title}</span>
-          <strong className="totalValue">{deck.totals.B}</strong>
-        </div>
-        <div className="totalItem" style={{ borderColor: ZONE_INFO.C.accent }}>
-          <span className="totalLabel">{ZONE_INFO.C.title}</span>
-          <strong className="totalValue">{deck.totals.C}</strong>
-        </div>
-      </section>
 
       {error && <p className="errorBanner">{error}</p>}
 
@@ -402,19 +475,19 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             <p className="emptyMessage">B 영역에 카드가 없습니다.</p>
           ) : (
             <div className="layerList">
-              {deck.zoneBLayers.map((layer) => {
+              {deck.zoneBLayers.map((layer, index) => {
                 const layerLabel =
-                  layer.position === 1 ? 'B1 · 상단' : `B${layer.position}`;
+                  index === 0 ? 'B1 · 상단' : `B${index + 1}`;
                 return (
-                  <div key={layer.id} className="layerBlock">
+                  <div key={index} className="layerBlock">
                     <div className="layerHeader">
                       <span>{layerLabel}</span>
-                      <span>{layer.total}장</span>
+                      <span>{1}장</span>
                     </div>
                     <ul className="zoneList">
-                      {layer.cities.map((city) => (
+                      {layer.map((city) => (
                         <li
-                          key={`B${layer.id}-${city.name}`}
+                          key={`B${index + 1}-${city.name}`}
                           className="zoneListItem"
                         >
                           <div className="zoneCityText">

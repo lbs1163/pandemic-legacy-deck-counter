@@ -198,12 +198,34 @@ export function calculateEpidemicProbs(
   const zoneCTotal = zoneC.reduce((acc, city) => acc + city.count, 0);
 
   const probs_arr = zoneC.filter((cityZoneC) => cityZoneC.count > 0).map((cityZoneC) => {
+    let copiedZoneA = [...zoneA];
     let copiedZoneC = [...zoneC];
     const zoneCprob = 1.0 * cityZoneC.count / zoneCTotal;
 
-    const probs = calculateProbs([zoneA, ...zoneBLayers, copiedZoneC], numDraw);
+    const zoneCIndex = copiedZoneC.findIndex((city) => city.name === cityZoneC.name);
+    if (zoneCIndex === -1)
+      throw new Error(`City ${cityZoneC.name} not found in Zone C.`);
+
+    const zoneCEntry = copiedZoneC[zoneCIndex];
+    if (zoneCEntry.count < 1)
+      throw new Error(`City ${cityZoneC.name} in Zone C has insufficient count.`);
+
+    if (zoneCEntry.count === 1) {
+      copiedZoneC.splice(zoneCIndex, 1);
+    } else {
+      copiedZoneC[zoneCIndex] = { ...zoneCEntry, count: zoneCEntry.count - 1 };
+    }
+
+    const zoneAIndex = copiedZoneA.findIndex((city) => city.name === cityZoneC.name);
+    if (zoneAIndex === -1) {
+      copiedZoneA.push({ name: cityZoneC.name, count: 1 });
+    } else {
+      copiedZoneA[zoneAIndex] = { ...copiedZoneA[zoneAIndex], count: copiedZoneA[zoneAIndex].count + 1 };
+    }
+
+    const probs = calculateProbs([copiedZoneA, ...zoneBLayers, copiedZoneC], numDraw);
     return probs.map((prob): CityProbability => ({ name: prob.name, probs: prob.probs.map((p) => ({draw: p.draw, probability: p.probability * zoneCprob}))}));
   });
 
-  return probs_arr.reduce((acc: CityProbability[], probs: CityProbability[]) => addProbs(acc, probs), []);
+  return sortCityProbabilities(probs_arr.reduce((acc: CityProbability[], probs: CityProbability[]) => addProbs(acc, probs), []));
 }

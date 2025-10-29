@@ -209,6 +209,7 @@ button {
 
 .playerColorTotalsItem .colorLabel {
   color: #cbd5f5;
+  margin-left: 5px;
 }
 
 .playerColorTotalsItem .colorCount {

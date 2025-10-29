@@ -2,7 +2,7 @@ import { kv } from '@vercel/kv';
 
 const KV_DECK_KEY = 'pandemic:deck-state:v1';
 
-const INITIAL_EPIDEMIC_COUNTS = 5;
+export const INITIAL_EPIDEMIC_COUNTS = 5;
 
 const INITIAL_CITIES: CityInfo[] = [
   {
@@ -408,9 +408,18 @@ function drawFromTopPile(state: GameState, isEpidemic?: boolean) {
     throw new Error('플레이어 덱에 남은 카드가 없습니다.');
   }
 
+  const drawedEpidemicCards = INITIAL_EPIDEMIC_COUNTS - state.playerEpidemicCounts;
+
+  // Cannot draw epidemic cards for initial draws
+  if (idx == 0 && isEpidemic == true)
+    throw new Error('초기 드로우에는 전염 카드가 나올 수 없습니다.');
+
+  // Cannot draw epidemic cards when there is none
+  if (drawedEpidemicCards >= idx && isEpidemic == true)
+    throw new Error('현재 남은 장수 상 전염 카드가 나올 수 없습니다.');
+
   // Last card should be epidemic card
   if (state.playerPiles[idx] == 1) {
-    const drawedEpidemicCards = INITIAL_EPIDEMIC_COUNTS - state.playerEpidemicCounts;
     if (drawedEpidemicCards < idx && isEpidemic != true)
       throw new Error('현재 남은 장수 상 전염 카드가 나와야 합니다.');
   }

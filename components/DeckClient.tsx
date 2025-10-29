@@ -1,6 +1,6 @@
 'use client';
 
-import type { GameSnapshot } from '@/lib/deckState';
+import { INITIAL_EPIDEMIC_COUNTS, type GameSnapshot } from '@/lib/deckState';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -178,8 +178,12 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     [deck.zoneC]
   );
 
-  const canTriggerEpidemic =
-    deck.playerEpidemicCounts > 0 && epidemicCandidates.length > 0;
+  const pileIndex = deck.playerPiles.findIndex((c) => c > 0);
+  const drawedEpidemicCards = INITIAL_EPIDEMIC_COUNTS - deck.playerEpidemicCounts;
+  const canTriggerEpidemic = pileIndex != 0 &&
+                              drawedEpidemicCards < pileIndex &&
+                              deck.playerEpidemicCounts > 0 &&
+                              epidemicCandidates.length > 0;
 
   const handleIncrement = useCallback(
     async (cityName: string) => {

@@ -2,6 +2,8 @@ import { kv } from '@vercel/kv';
 
 const KV_DECK_KEY = 'pandemic:deck-state:v1';
 
+const INITIAL_EPIDEMIC_COUNTS = 5;
+
 const INITIAL_CITIES: CityInfo[] = [
   {
     name: '뉴욕',
@@ -148,14 +150,13 @@ function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?
 
   const initialDraws = players == 3 ? 9 : 8;
   const cityCards = cityInfos.reduce((acc, cityInfo) => acc + cityInfo.playerCardsCount, 0);
-  const epidemicCards = 5;
-  const remaining = cityCards + eventCount + epidemicCards - initialDraws;
+  const remaining = cityCards + eventCount + INITIAL_EPIDEMIC_COUNTS - initialDraws;
   
   // Split remaining into 5 piles as evenly as possible, larger piles on top
-  const base = Math.floor(remaining / epidemicCards);
-  let extra = remaining % epidemicCards;
+  const base = Math.floor(remaining / INITIAL_EPIDEMIC_COUNTS);
+  let extra = remaining % INITIAL_EPIDEMIC_COUNTS;
   const fivePiles: number[] = [];
-  for (let i = 0; i < epidemicCards; i += 1) {
+  for (let i = 0; i < INITIAL_EPIDEMIC_COUNTS; i += 1) {
     const size = base + (extra > 0 ? 1 : 0);
     if (extra > 0) extra -= 1;
     fivePiles.push(size + 1); // +1 epidemic per pile
@@ -179,7 +180,7 @@ function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?
       count: cityInfo.playerCardsCount
     })),
     playerEventCounts: eventCount,
-    playerEpidemicCounts: epidemicCards,
+    playerEpidemicCounts: INITIAL_EPIDEMIC_COUNTS,
   };
 
   return state;
@@ -401,11 +402,17 @@ export async function startNewGame(params?: { players?: number; eventCount?: num
   });
 }
 
-function drawFromTopPile(state: GameState) {
+function drawFromTopPile(state: GameState, isEpidemic?: boolean) {
   const idx = state.playerPiles.findIndex((c) => c > 0);
   if (idx === -1) {
     throw new Error('플레이어 덱에 남은 카드가 없습니다.');
   }
+
+  // Last card should be epidemic card
+  if (state.playerPiles[idx] == 1 && idx + state.playerEpidemicCounts >= INITIAL_EPIDEMIC_COUNTS)
+    if (isEpidemic != true)
+      throw new Error('현재 남은 장수 상 전염 카드가 나와야 합니다.');
+
   state.playerPiles[idx] -= 1;
 }
 
@@ -448,7 +455,7 @@ export async function drawPlayerEpidemic(bottomInfectionCityCard: string): Promi
       throw new Error(`미공개 감염 카드 중에 ${cityState.name} 도시 카드가 없습니다.`);
     }
 
-    drawFromTopPile(state);
+    drawFromTopPile(state, true);
     cityState.safe -= 1;
     cityState.discard += 1;
 

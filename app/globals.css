@@ -624,6 +624,7 @@ button {
   text-align: center;
   border: 1px solid rgba(59, 130, 246, 0.12);
   font-size: 0.85rem;
+  background-clip: padding-box !important;
 }
 
 .probabilityTable th {

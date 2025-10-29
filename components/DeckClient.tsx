@@ -256,7 +256,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   }, [epidemicProbability]);
 
   const cityProbabilities = useMemo(() => {
-    const probs = calculateProbs([...deck.zoneBLayers, deck.zoneC], numDraw);
+    const probs = calculateProbs([...deck.zoneBLayers, deck.zoneC], numDraw, deck.cityInfos);
 
     if (canTriggerEpidemic == false)
       return {
@@ -264,13 +264,13 @@ export default function DeckClient({ initialData }: DeckClientProps) {
         epidemic: []
       };
     else {
-      const epidemicProbs = calculateEpidemicProbs(deck.zoneA, deck.zoneBLayers, deck.zoneC, numDraw);
+      const epidemicProbs = calculateEpidemicProbs(deck.zoneA, deck.zoneBLayers, deck.zoneC, numDraw, deck.cityInfos);
       return {
         nonEpidemic: probs,
         epidemic: epidemicProbs,
       }
     }
-  }, [canTriggerEpidemic, deck.zoneA, deck.zoneBLayers, deck.zoneC, numDraw]);
+  }, [canTriggerEpidemic, deck.zoneA, deck.zoneBLayers, deck.zoneC, numDraw, deck.cityInfos]);
 
   const probabilityFormatter = useMemo(
     () =>

@@ -1,4 +1,4 @@
-import { CITY_COLOR_ORDER, CITY_COLOR_PRIORITY, CityCardsSnapshot, CityColor } from "@/lib/deckState";
+import { CITY_COLOR_ORDER, CITY_COLOR_PRIORITY, CityCardsSnapshot, CityColor, CityInfo } from "@/lib/deckState";
 
 export type DrawProbability = {
   draw: number,
@@ -67,9 +67,13 @@ function calculatePileProbs(pile: CityCardsSnapshot[], numDraw: number): { remai
   }
 };
 
-function sortCityProbabilities(cityProbs: CityProbability[]) {
+function sortCityProbabilities(cityProbs: CityProbability[], cityInfos: CityInfo[]) {
   const cityColorMap = new Map<string, CityColor>();
+  cityInfos.forEach((cityInfo) => cityColorMap.set(cityInfo.name, cityInfo.color));
+
   const fallbackPriority = CITY_COLOR_ORDER.length;
+
+  console.log(cityColorMap, fallbackPriority)
   
   return [...cityProbs].sort((a, b) => {
     const colorA = cityColorMap.get(a.name);
@@ -169,7 +173,7 @@ function addProbs(a: CityProbability[], b: CityProbability[]): CityProbability[]
   });
 }
 
-export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number): CityProbability[] {
+export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number, cityInfos: CityInfo[]): CityProbability[] {
   let left = numDraw;
   let result: CityProbability[] = [];
 
@@ -186,14 +190,15 @@ export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number): C
   if (left > 0)
     throw new Error(`Not enough cards for drawing ${numDraw} cards in piles: ${piles.toString()}`);
 
-  return sortCityProbabilities(result);
+  return sortCityProbabilities(result, cityInfos);
 }
 
 export function calculateEpidemicProbs(
   zoneA: CityCardsSnapshot[],
   zoneBLayers: CityCardsSnapshot[][],
   zoneC: CityCardsSnapshot[],
-  numDraw: number
+  numDraw: number,
+  cityInfos: CityInfo[]
 ): CityProbability[] {
   const zoneCTotal = zoneC.reduce((acc, city) => acc + city.count, 0);
 
@@ -223,9 +228,9 @@ export function calculateEpidemicProbs(
       copiedZoneA[zoneAIndex] = { ...copiedZoneA[zoneAIndex], count: copiedZoneA[zoneAIndex].count + 1 };
     }
 
-    const probs = calculateProbs([copiedZoneA, ...zoneBLayers, copiedZoneC], numDraw);
+    const probs = calculateProbs([copiedZoneA, ...zoneBLayers, copiedZoneC], numDraw, cityInfos);
     return probs.map((prob): CityProbability => ({ name: prob.name, probs: prob.probs.map((p) => ({draw: p.draw, probability: p.probability * zoneCprob}))}));
   });
 
-  return sortCityProbabilities(probs_arr.reduce((acc: CityProbability[], probs: CityProbability[]) => addProbs(acc, probs), []));
+  return sortCityProbabilities(probs_arr.reduce((acc: CityProbability[], probs: CityProbability[]) => addProbs(acc, probs), []), cityInfos);
 }

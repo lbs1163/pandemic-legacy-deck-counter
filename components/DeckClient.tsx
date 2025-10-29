@@ -250,16 +250,26 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   }, [epidemicProbability]);
 
   const cityProbabilities = useMemo(() => {
-    let cityProbs = calculateProbs([deck.zoneA, ...deck.zoneBLayers, deck.zoneC], numDraw);
-
+    const probs = calculateProbs([deck.zoneA, ...deck.zoneBLayers, deck.zoneC], numDraw);
     return {
-      nonEpidemic: cityProbs,
-      epidemic: cityProbs,
+      nonEpidemic: probs,
+      epidemic: probs
     };
   }, [deck.zoneA, deck.zoneBLayers, deck.zoneC, numDraw]);
 
-  const showingCityProbabilities: CityProbability[] = predictEpidemic ? cityProbabilities.epidemic : cityProbabilities.nonEpidemic;
+  const probabilityFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat('ko-KR', {
+        style: 'percent',
+        maximumFractionDigits: 1
+      }),
+    []
+  );
 
+  const showingCityProbabilities: CityProbability[] = predictEpidemic
+    ? cityProbabilities.epidemic
+    : cityProbabilities.nonEpidemic;
+  console.log(showingCityProbabilities);
   const cityInfoMap = useMemo(() => {
     const entries = new Map<string, CityInfo>();
     deck.cityInfos.forEach((info) => {
@@ -620,11 +630,59 @@ export default function DeckClient({ initialData }: DeckClientProps) {
         <section>
           <div className="deckSummary">
             <span className="deckSummaryTitle">감염 카드 덱 더미</span>
-            <p className="probability">
-              감염 카드 확률표 (전염 {predictEpidemic ? "후" : "전"}, {numDraw}장 드로우)
-            </p>
-            {/** TODO: Add table for probability */}
-            {/** use `showingCityProbabilities` variable and make table */}
+            <div className="deckSummaryControls">
+              <label className="deckSummaryLabel">
+                <span>드로우 수</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={6}
+                  value={numDraw}
+                  onChange={(event) =>
+                    setNumDraw(Math.max(1, Math.min(6, Number.parseInt(event.target.value, 10) || 1)))
+                  }
+                />
+              </label>
+              <label className="togglePredict">
+                <input
+                  type="checkbox"
+                  checked={predictEpidemic}
+                  onChange={(event) => setPredictEpidemic(event.target.checked)}
+                />
+                <span>전염 발생 후 기준</span>
+              </label>
+            </div>
+            <table className="probabilityTable">
+              <thead>
+                <tr>
+                  <th scope="col">도시</th>
+                  {Array.from({ length: numDraw }, (_, index) => (
+                    <th key={`draw-${index + 1}`} scope="col">{index + 1}장째</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {showingCityProbabilities.map((city) => (
+                  <tr key={`prob-${city.name}`}>
+                    <th scope="row">
+                      <div className="probCity">
+                        {renderCityColorDot(city.name)}
+                        <span>{city.name}</span>
+                      </div>
+                    </th>
+                    {Array.from({ length: numDraw }, (_, index) => {
+                      const drawIndex = index + 1;
+                      const prob = city.probs.find((entry) => entry.draw === drawIndex)?.probability ?? 0;
+                      return (
+                        <td key={`prob-${city.name}-${drawIndex}`}>
+                          {probabilityFormatter.format(prob)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>

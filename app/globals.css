@@ -167,33 +167,12 @@ button {
   color: #9ca3af;
 }
 
-.probability {
-  margin: 0 0 12px;
-  font-size: 0.8rem;
-  color: #fde68a;
-}
-
 .playerColorTotals {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 8px;
   margin: 0 0 16px;
 }
-
-.deckSummary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0 0 16px;
-}
-
-.deckSummaryTitle {
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #9ca3af;
-}
-
 .playerPileGrid {
   display: grid;
   align-items: stretch;
@@ -574,4 +553,88 @@ button {
   .playerCards .zoneCard {
     height: 100%;
   }
+}
+.deckSummary {
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 16px;
+  padding: 18px;
+  background: rgba(17, 24, 39, 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.deckSummaryTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #bfdbfe;
+}
+
+.deckSummaryControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.deckSummaryLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.deckSummaryLabel input[type='number'] {
+  width: 72px;
+  border-radius: 999px;
+  border: 1px solid #374151;
+  background: rgba(31, 41, 55, 0.65);
+  padding: 6px 12px;
+  color: #e5e7eb;
+}
+
+.togglePredict {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.probabilityTable {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.probabilityTable th,
+.probabilityTable td {
+  padding: 10px 12px;
+  text-align: center;
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  font-size: 0.85rem;
+}
+
+.probabilityTable th {
+  background: rgba(59, 130, 246, 0.15);
+  color: #dbeafe;
+  font-weight: 600;
+}
+
+.probabilityTable tbody tr:nth-child(odd) {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.probCity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.probabilityTable td {
+  color: #f9fafb;
 }

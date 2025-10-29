@@ -111,7 +111,7 @@ export interface GameSnapshot {
   playerEventsRemaining: number;
 }
 
-type StateMutation = (state: GameState) => void;
+type StateMutation = (state: GameState) => GameState;
 
 const hasKv =
   typeof process.env.KV_REST_API_URL === 'string' ||
@@ -159,7 +159,7 @@ function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?
     fivePiles.push(size + 1); // +1 epidemic per pile
   }
 
-  const state: GameState = {
+  let state: GameState = {
     revision: 0,
     cityInfos: cloneState(cityInfos),
     infectionCityCardsStates: cityInfos.map((cityInfo) => ({
@@ -217,10 +217,10 @@ async function updateState(mutator: StateMutation): Promise<GameSnapshot> {
   return enqueueStateWork(async () => {
     let storage = await loadStorage();
 
-    let newState = cloneState(getCurrentState(storage));
-    mutator(newState);
+    let oldState = cloneState(getCurrentState(storage));
+    let newState = mutator(oldState);
     cleanupEmptyLayers(newState);
-    newState.revision += 1;
+    newState.revision = oldState.revision + 1;
 
     storage = [...storage, newState];
     if (storage.length > 20)
@@ -233,11 +233,11 @@ async function updateState(mutator: StateMutation): Promise<GameSnapshot> {
 
 export async function undoLastOperation(): Promise<GameSnapshot> {
   return enqueueStateWork(async () => {
-    const storage = await loadStorage();
+    let storage = await loadStorage();
     if (storage.length <= 1) {
       throw new Error('되돌릴 내역이 없습니다.');
     }
-    const currentState = cloneState(getCurrentState(storage));
+    let currentState = cloneState(getCurrentState(storage));
     storage.pop();
     storage[storage.length - 1].revision = currentState.revision + 1;
     await saveStorage(storage);
@@ -368,6 +368,8 @@ export async function discardInfectionCard(cityName: string): Promise<GameSnapsh
     }
 
     cityState.discard += 1;
+
+    return state;
   });
 }
 
@@ -397,6 +399,8 @@ export async function triggerEpidemic(cityName: string): Promise<GameSnapshot> {
     }
 
     state.zoneBLayers = [newLayerCards, ...state.zoneBLayers];
+
+    return state;
   });
 }
 
@@ -421,6 +425,8 @@ export async function addCity(
 
     // Only update city infos because updated city info will be affected when new game started (for both infection card and player card)
     state.cityInfos.push({name: cityName, color: color, playerCardsCount: count, infectionCardsCount: count});
+
+    return state;
   });
 }
 
@@ -453,6 +459,8 @@ export async function drawPlayerCity(cityName: string): Promise<GameSnapshot> {
     }
     current.count -= 1;
     drawFromTopPile(state);
+
+    return state;
   });
 }
 
@@ -463,5 +471,7 @@ export async function drawPlayerEvent(): Promise<GameSnapshot> {
     }
     state.playerEventsRemaining -= 1;
     drawFromTopPile(state);
+
+    return state;
   });
 }

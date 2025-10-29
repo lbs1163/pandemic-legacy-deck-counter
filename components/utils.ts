@@ -38,8 +38,8 @@ function calculatePileProbs(pile: CityCardsSnapshot[], numDraw: number): { remai
   if (numDraw < 1)
     throw new Error('numDraw should be at least 1.');
 
-  // 1, 2, ..., numDraw
-  const draws = [...Array(numDraw).keys()].map((i) => i + 1);
+  // 0, 1, 2, ..., numDraw
+  const draws = [...Array(numDraw + 1).keys()];
 
   const total = pile.reduce((acc, city) => acc + city.count, 0);
   if (total <= numDraw) {

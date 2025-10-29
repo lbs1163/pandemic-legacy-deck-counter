@@ -215,6 +215,12 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   const canTriggerEpidemic =
     isEpidemicInCurrentPile && epidemicCandidates.length > 0;
 
+  useEffect(() => {
+    if (!canTriggerEpidemic && predictEpidemic) {
+      setPredictEpidemic(false);
+    }
+  }, [canTriggerEpidemic, predictEpidemic]);
+
   const epidemicProbability = useMemo(() => {
     const pileIndex = deck.playerPiles.findIndex((c) => c > 0);
     if (pileIndex == -1)
@@ -275,7 +281,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     []
   );
 
-  const showingCityProbabilities: CityProbability[] = predictEpidemic
+  const showingCityProbabilities: CityProbability[] = predictEpidemic && canTriggerEpidemic
     ? cityProbabilities.epidemic
     : cityProbabilities.nonEpidemic;
 
@@ -652,6 +658,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                   }
                 />
               </label>
+            {canTriggerEpidemic &&
               <label className="togglePredict">
                 <input
                   type="checkbox"
@@ -660,6 +667,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                 />
                 <span>전염 발생 후 기준</span>
               </label>
+            }
             </div>
             <table className="probabilityTable">
               <thead>

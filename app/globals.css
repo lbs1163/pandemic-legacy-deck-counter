@@ -167,6 +167,12 @@ button {
   color: #9ca3af;
 }
 
+.epidemicProbability {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #fde68a;
+}
+
 .zoneList {
   list-style: none;
   padding: 0;

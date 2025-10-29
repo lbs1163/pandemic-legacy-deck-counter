@@ -185,6 +185,40 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                               deck.playerEpidemicCounts > 0 &&
                               epidemicCandidates.length > 0;
 
+  const epidemicProbability = useMemo(() => {
+    const pileIndex = deck.playerPiles.findIndex((c) => c > 0);
+    if (pileIndex == -1)
+      return 0;
+    const drawedEpidemicCards = INITIAL_EPIDEMIC_COUNTS - deck.playerEpidemicCounts;
+    const isFirstPileEpidemicLeft = drawedEpidemicCards < pileIndex;
+
+    const spansTwoPiles = deck.playerPiles[pileIndex] == 1;
+
+    if (spansTwoPiles) {      
+      if (isFirstPileEpidemicLeft == true)
+        return 1;
+
+      // No cards left
+      if (pileIndex + 1 >= deck.playerPiles.length)
+        return 0;
+
+      return 1 / deck.playerPiles[pileIndex + 1];
+    } else {
+      if (isFirstPileEpidemicLeft == false)
+        return 0;
+
+      return (deck.playerPiles[pileIndex] - 1) / (deck.playerPiles[pileIndex] * (deck.playerPiles[pileIndex] - 1) / 2);
+    }
+  }, [deck.playerPiles, deck.playerEpidemicCounts]);
+
+  const epidemicProbabilityLabel = useMemo(() => {
+    const formatter = new Intl.NumberFormat('ko-KR', {
+      style: 'percent',
+      maximumFractionDigits: 1
+    });
+    return formatter.format(epidemicProbability);
+  }, [epidemicProbability]);
+
   const handleIncrement = useCallback(
     async (cityName: string) => {
       const requestId = startRequest();
@@ -420,11 +454,17 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       {error && <p className="errorBanner">{error}</p>}
 
       <div className="playerZonesLayout">
+        <p className="epidemicProbability">
+          다음 2장 중 전염 카드가 등장할 확률 <strong>{epidemicProbabilityLabel}</strong>
+        </p>
+      </div>
+
+      <div className="playerZonesLayout">
         <section className="playerCards">
           <div className="zoneCard" style={{ borderColor: '#8b5cf6' }}>
             <header className="zoneHeader">
-              <h2>플레이어 카드</h2>
-              <p>이벤트와 도시 카드 잔여를 추적합니다.</p>
+              <h2>남은 플레이어 카드</h2>
+              <p>도시, 이벤트, 전염 카드를 추적합니다.</p>
             </header>
             <ul className="zoneList">
               {deck.playerCityCounts.map((city) => (

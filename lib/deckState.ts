@@ -266,10 +266,7 @@ function sortCities(list: CityCardsSnapshot[]): CityCardsSnapshot[] {
 
 function buildZoneA(state: GameState): CityCardsSnapshot[] {
   const list = state.cityInfos.map((cityInfo) => {
-    const infectionCityCardsState = state.infectionCityCardsStates.find((state) => state.name == cityInfo.name);
-    if (!infectionCityCardsState) {
-      throw new Error('도시 데이터를 찾을 수 없습니다.');
-    }
+    const infectionCityCardsState = getInfectionCityCardsState(state, cityInfo.name);
 
     return {
       name: infectionCityCardsState.name,
@@ -282,10 +279,7 @@ function buildZoneA(state: GameState): CityCardsSnapshot[] {
 
 function buildZoneC(state: GameState): CityCardsSnapshot[] {
   const list = state.cityInfos.map((cityInfo) => {
-    const infectionCityCardsState = state.infectionCityCardsStates.find((state) => state.name == cityInfo.name);
-    if (!infectionCityCardsState) {
-      throw new Error('도시 데이터를 찾을 수 없습니다.');
-    }
+    const infectionCityCardsState = getInfectionCityCardsState(state, cityInfo.name);
 
     return {
       name: infectionCityCardsState.name,
@@ -298,10 +292,7 @@ function buildZoneC(state: GameState): CityCardsSnapshot[] {
 
 function buildZoneD(state: GameState): CityCardsSnapshot[] {
   const list = state.cityInfos.map((cityInfo) => {
-    const infectionCityCardsState = state.infectionCityCardsStates.find((state) => state.name == cityInfo.name);
-    if (!infectionCityCardsState) {
-      throw new Error('도시 데이터를 찾을 수 없습니다.');
-    }
+    const infectionCityCardsState = getInfectionCityCardsState(state, cityInfo.name);
 
     return {
       name: infectionCityCardsState.name,
@@ -340,7 +331,6 @@ export async function getGameSnapshot(): Promise<GameSnapshot> {
 
 function getInfectionCityCardsState(state: GameState, cityname: string): InfectionCityCardsState {
   const result = state.infectionCityCardsStates.find((state) => state.name == cityname);
-
   if (result === undefined)
     throw new Error('해당하는 도시의 감염 카드 정보가 없습니다.');
 
@@ -353,7 +343,7 @@ export async function discardInfectionCard(cityName: string): Promise<GameSnapsh
 
     if (state.zoneBLayers.length <= 0) {
       if (cityState.safe <= 0) {
-        throw new Error(`${cityState.name} 도시에 남은 카드가 없습니다.`);
+        throw new Error(`미공개 감염 카드 중에 ${cityState.name} 도시 카드가 없습니다.`);
       }
       cityState.safe -= 1;
     } else {
@@ -361,7 +351,7 @@ export async function discardInfectionCard(cityName: string): Promise<GameSnapsh
 
       const current = topLayer.find((city) => city.name == cityName);
       if (current === undefined || current.count <= 0 ) {
-        throw new Error(`현재 B1 층에 ${cityState.name} 카드가 없습니다.`);
+        throw new Error(`다시 섞인 감염 카드에 ${cityState.name} 카드가 없습니다.`);
       }
       
       current.count -= 1;
@@ -426,8 +416,9 @@ export async function drawPlayerCity(cityName: string): Promise<GameSnapshot> {
     if (current === undefined || current.count <= 0) {
       throw new Error(`${key} 도시 카드가 남아있지 않습니다.`);
     }
-    current.count -= 1;
+
     drawFromTopPile(state);
+    current.count -= 1;
 
     return state;
   });
@@ -438,8 +429,9 @@ export async function drawPlayerEvent(): Promise<GameSnapshot> {
     if (state.playerEventCounts <= 0) {
       throw new Error('이벤트 카드가 남아있지 않습니다.');
     }
-    state.playerEventCounts -= 1;
+
     drawFromTopPile(state);
+    state.playerEventCounts -= 1;
 
     return state;
   });
@@ -452,11 +444,11 @@ export async function drawPlayerEpidemic(bottomInfectionCityCard: string): Promi
     }
 
     const cityState = getInfectionCityCardsState(state, bottomInfectionCityCard);
-
     if (cityState.safe <= 0) {
-      throw new Error(`${cityState.name} 도시에 C 영역 카드가 없습니다.`);
+      throw new Error(`미공개 감염 카드 중에 ${cityState.name} 도시 카드가 없습니다.`);
     }
 
+    drawFromTopPile(state);
     cityState.safe -= 1;
     cityState.discard += 1;
 
@@ -471,12 +463,10 @@ export async function drawPlayerEpidemic(bottomInfectionCityCard: string): Promi
 
     const hasCards = Object.keys(newLayerCards).length > 0;
     if (!hasCards) {
-      throw new Error('전염 카드 처리 중 오류가 발생했습니다.');
+      throw new Error('전염 카드 처리 중 버린 감염 카드 더미가 없는 오류가 발생했습니다.');
     }
 
     state.zoneBLayers = [newLayerCards, ...state.zoneBLayers];
-
-    drawFromTopPile(state);
     state.playerEpidemicCounts -= 1;
 
     return state;

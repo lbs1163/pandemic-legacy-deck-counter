@@ -203,10 +203,13 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
   const pileIndex = deck.playerPiles.findIndex((c) => c > 0);
   const drawedEpidemicCards = INITIAL_EPIDEMIC_COUNTS - deck.playerEpidemicCounts;
-  const canTriggerEpidemic = pileIndex != 0 &&
-                              drawedEpidemicCards < pileIndex &&
-                              deck.playerEpidemicCounts > 0 &&
-                              epidemicCandidates.length > 0;
+  const isEpidemicInCurrentPile =
+    pileIndex > 0 &&
+    drawedEpidemicCards < pileIndex &&
+    deck.playerEpidemicCounts > 0;
+
+  const canTriggerEpidemic =
+    isEpidemicInCurrentPile && epidemicCandidates.length > 0;
 
   const epidemicProbability = useMemo(() => {
     const pileIndex = deck.playerPiles.findIndex((c) => c > 0);
@@ -270,12 +273,16 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   }, [cityInfoMap, deck.playerCityCounts]);
 
   const playerPileSummaries = useMemo(() => {
-    return deck.playerPiles.map((count, index) => ({
-      count,
-      index,
-      isActive: index === pileIndex && count > 0
-    }));
-  }, [deck.playerPiles, pileIndex]);
+    return deck.playerPiles.map((count, index) => {
+      const isActive = index === pileIndex && count > 0;
+      return {
+        count,
+        index,
+        isActive,
+        hasEpidemic: isActive && isEpidemicInCurrentPile
+      };
+    });
+  }, [deck.playerPiles, pileIndex, isEpidemicInCurrentPile]);
 
   const renderCityColorDot = useCallback(
     (cityName: string) => {
@@ -491,7 +498,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       </header>
 
       <section className="newCitySection">
-        <h2>새롭게 발견된 도시 추가</h2>
+        <h2>새롭게 공급망에 연결된 도시 추가</h2>
         <form onSubmit={handleAddCity} className="newCityForm">
           <input
             type="text"
@@ -539,6 +546,8 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                 <div
                   key={pile.index}
                   className={`playerPileItem${pile.isActive ? ' isActive' : ''}${
+                    pile.hasEpidemic ? ' hasEpidemic' : ''
+                  }${
                     pile.count === 0 ? ' isEmpty' : ''
                   }`}
                 >

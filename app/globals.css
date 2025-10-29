@@ -217,6 +217,11 @@ button {
   box-shadow: 0 0 12px rgba(96, 165, 250, 0.35);
 }
 
+.playerPileItem.hasEpidemic {
+  border-color: rgba(34, 197, 94, 0.7);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+}
+
 .playerPileItem.isEmpty {
   opacity: 0.5;
 }

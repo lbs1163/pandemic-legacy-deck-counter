@@ -257,10 +257,6 @@ function cleanupEmptyLayers(state: GameState) {
 
 function sortCities(list: CityCardsSnapshot[]): CityCardsSnapshot[] {
   return [...list].sort((a, b) => {
-    const diff = b.count - a.count;
-    if (diff !== 0) {
-      return diff;
-    }
     return a.name.localeCompare(b.name, 'ko');
   });
 }
@@ -326,7 +322,7 @@ function buildSnapshot(state: GameState): GameSnapshot {
     zoneD: buildZoneD(state),
 
     playerPiles: cloneState(state.playerPiles),
-    playerCityCounts: cloneState(state.playerCityCounts),
+    playerCityCounts: sortCities(state.playerCityCounts),
     playerEventsRemaining: state.playerEventsRemaining,
   };
 }

@@ -178,15 +178,6 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     [deck.zoneC]
   );
 
-  const playerCityList = useMemo(
-    () =>
-      Object.entries(deck.playerCityCounts ?? {})
-        .map(([name, count]) => ({ name, count: Number(count) || 0 }))
-        .filter((c) => c.count > 0)
-        .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name, 'ko')),
-    [deck.playerCityCounts]
-  );
-
   const handleIncrement = useCallback(
     async (cityName: string) => {
       const requestId = startRequest();
@@ -226,6 +217,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       setIsBusy(false);
     }
   }, [applyError, applySnapshot, isBusy, startRequest]);
+
   const handleNewGame = useCallback(async () => {
     if (isBusy) {
       return;
@@ -427,24 +419,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
               <p>이벤트와 도시 카드 잔여를 추적합니다.</p>
             </header>
             <ul className="zoneList">
-              <li className="zoneListItem">
-                <div className="zoneCityText">
-                  <span className="cityName">이벤트</span>
-                  <span className="cityCount">
-                    {deck.playerEventsRemaining ?? 0}
-                    <span className="countUnit">장</span>
-                  </span>
-                </div>
-                <button
-                  className="addButton"
-                  onClick={() => void handleDrawEvent()}
-                  disabled={isBusy || (deck.playerEventsRemaining ?? 0) <= 0}
-                  aria-label="이벤트 카드 드로우"
-                >
-                  -
-                </button>
-              </li>
-              {playerCityList.map((city) => (
+              {deck.playerCityCounts.map((city) => (
                 <li key={`PC-${city.name}`} className="zoneListItem">
                   <div className="zoneCityText">
                     <span className="cityName">{city.name}</span>
@@ -463,6 +438,23 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                   </button>
                 </li>
               ))}
+              <li className="zoneListItem">
+                <div className="zoneCityText">
+                  <span className="cityName">이벤트</span>
+                  <span className="cityCount">
+                    {deck.playerEventsRemaining ?? 0}
+                    <span className="countUnit">장</span>
+                  </span>
+                </div>
+                <button
+                  className="addButton"
+                  onClick={() => void handleDrawEvent()}
+                  disabled={isBusy || (deck.playerEventsRemaining ?? 0) <= 0}
+                  aria-label="이벤트 카드 드로우"
+                >
+                  -
+                </button>
+              </li>
             </ul>
           </div>
         </section>

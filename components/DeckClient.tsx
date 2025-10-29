@@ -122,6 +122,24 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     }
   }, [applyError, applySnapshot, startRequest]);
 
+  const handleUndo = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+    const requestId = startRequest();
+    setIsBusy(true);
+    applyError(null, requestId);
+    try {
+      const updated = await mutateDeck('/api/deck/undo', {});
+      applySnapshot(updated, requestId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '되돌리기에 실패했습니다.';
+      applyError(message, requestId);
+    } finally {
+      setIsBusy(false);
+    }
+  }, [applyError, applySnapshot, isBusy, startRequest]);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -137,6 +155,18 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
     return () => clearInterval(timer);
   }, [isBusy, refresh]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+      if (isCtrlOrMeta && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        void handleUndo();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleUndo]);
 
   const epidemicCandidates = useMemo(
     () => deck.zoneC.filter((city) => city.count > 0),
@@ -193,7 +223,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       const updated = await mutateDeck('/api/deck/new-game', {});
       applySnapshot(updated, requestId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : '�� ������ �������� ���߽��ϴ�.';
+      const message = err instanceof Error ? err.message : '새 게임을 시작할 수 없습니다.';
       applyError(message, requestId);
     } finally {
       setIsBusy(false);
@@ -280,6 +310,14 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             aria-label="최신 상태로 새로고침"
           >
             {isRefreshing ? '갱신 중…' : '새로고침'}
+          </button>
+          <button
+            className="refreshButton"
+            onClick={() => void handleUndo()}
+            disabled={isBusy}
+            aria-label="되돌리기 (Ctrl+Z)"
+          >
+            되돌리기
           </button>
           <button
             className="refreshButton"

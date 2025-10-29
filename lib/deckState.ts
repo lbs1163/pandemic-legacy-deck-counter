@@ -53,6 +53,15 @@ type DeckStorage = {
   hotLayers: HotLayer[];
   nextLayerId: number;
   revision: number;
+  history: DeckHistoryEntry[];
+};
+
+type DeckHistoryEntry = {
+  cityOrder: string[];
+  cities: Record<string, CityState>;
+  hotLayers: HotLayer[];
+  nextLayerId: number;
+  revision: number;
 };
 
 type StateMutation = (state: DeckStorage) => void;
@@ -89,7 +98,8 @@ function createInitialState(): DeckStorage {
     cities: {},
     hotLayers: [],
     nextLayerId: 1,
-    revision: 0
+    revision: 0,
+    history: []
   };
 
   INITIAL_CITIES.forEach((city) => ensureCityExists(state, city));
@@ -103,6 +113,7 @@ function ensureStateShape(raw: unknown): DeckStorage {
     cityOrder?: string[];
     cities?: Record<string, CityState>;
     hotLayers?: HotLayer[];
+    history?: DeckHistoryEntry[];
   };
 
   if (!Array.isArray(state.cityOrder)) {
@@ -116,6 +127,23 @@ function ensureStateShape(raw: unknown): DeckStorage {
   if (!Array.isArray(state.hotLayers)) {
     state.hotLayers = [];
   }
+
+  if (!Array.isArray(state.history)) {
+    state.history = [];
+  }
+
+  // Clamp history size and shapes
+  state.history = state.history
+    .filter(
+      (h) =>
+        h &&
+        Array.isArray(h.cityOrder) &&
+        h.cities && typeof h.cities === 'object' &&
+        Array.isArray(h.hotLayers) &&
+        typeof h.nextLayerId === 'number' &&
+        typeof h.revision === 'number'
+    )
+    .slice(-20);
 
   if (typeof state.nextLayerId !== 'number' || state.nextLayerId < 1) {
     state.nextLayerId = 1;
@@ -158,12 +186,31 @@ async function saveState(state: DeckStorage) {
 async function updateState(mutator: StateMutation): Promise<DeckSnapshot> {
   return enqueueStateWork(async () => {
     const state = await loadState();
+    pushHistory(state);
     mutator(state);
     cleanupEmptyLayers(state);
     state.revision += 1;
     await saveState(state);
     return buildSnapshot(state);
   });
+}
+
+function snapshotForHistory(state: DeckStorage): DeckHistoryEntry {
+  return {
+    cityOrder: cloneState(state.cityOrder),
+    cities: cloneState(state.cities),
+    hotLayers: cloneState(state.hotLayers),
+    nextLayerId: state.nextLayerId,
+    revision: state.revision
+  };
+}
+
+function pushHistory(state: DeckStorage) {
+  // Add current state to history; keep only last 20 entries
+  state.history.push(snapshotForHistory(state));
+  if (state.history.length > 20) {
+    state.history.splice(0, state.history.length - 20);
+  }
 }
 
 function ensureCityExists(state: DeckStorage, name: string, initialSafe?: number) {
@@ -374,9 +421,14 @@ export async function addCity(cityName: string, count: number): Promise<DeckSnap
 
 export async function resetToInitial(): Promise<DeckSnapshot> {
   return enqueueStateWork(async () => {
-    const current = await loadState();
-    const state = createInitialState();
-    state.revision = current.revision + 1;
+    const state = await loadState();
+    pushHistory(state);
+    const initial = createInitialState();
+    state.cityOrder = initial.cityOrder;
+    state.cities = initial.cities;
+    state.hotLayers = initial.hotLayers;
+    state.nextLayerId = initial.nextLayerId;
+    state.revision += 1;
     await saveState(state);
     return buildSnapshot(state);
   });
@@ -385,6 +437,7 @@ export async function resetToInitial(): Promise<DeckSnapshot> {
 export async function startNewGame(): Promise<DeckSnapshot> {
   return enqueueStateWork(async () => {
     const state = await loadState();
+    pushHistory(state);
 
     const totalByCity: Record<string, number> = {};
     // Start with A and C
@@ -409,6 +462,23 @@ export async function startNewGame(): Promise<DeckSnapshot> {
     state.hotLayers = [];
     state.nextLayerId = 1;
 
+    state.revision += 1;
+    await saveState(state);
+    return buildSnapshot(state);
+  });
+}
+
+export async function undoLastOperation(): Promise<DeckSnapshot> {
+  return enqueueStateWork(async () => {
+    const state = await loadState();
+    if (!state.history || state.history.length === 0) {
+      throw new Error('되돌릴 내역이 없습니다.');
+    }
+    const prev = state.history.pop() as DeckHistoryEntry;
+    state.cityOrder = cloneState(prev.cityOrder);
+    state.cities = cloneState(prev.cities);
+    state.hotLayers = cloneState(prev.hotLayers);
+    state.nextLayerId = prev.nextLayerId;
     state.revision += 1;
     await saveState(state);
     return buildSnapshot(state);

@@ -1,79 +1,125 @@
 import { kv } from '@vercel/kv';
 
-const INITIAL_CITIES = [
-  '뉴욕',
-  '워싱턴',
-  '잭슨빌',
-  '상파울루',
-  '런던',
-  '이스탄불',
-  '트리폴리',
-  '카이로',
-  '라고스'
-];
-
 const KV_DECK_KEY = 'pandemic:deck-state:v1';
 
-type Zone = 'A' | 'B' | 'C';
+const INITIAL_CITIES: CityInfo[] = [
+  {
+    name: '뉴욕',
+    color: 'Blue',
+    infectionCardsCount: 3,
+    playerCardsCount: 4,
+  },
+  {
+    name: '워싱턴',
+    color: 'Blue',
+    infectionCardsCount: 3,
+    playerCardsCount: 4,
+  },
+  {
+    name: '잭슨빌',
+    color: 'Yellow',
+    infectionCardsCount: 3,
+    playerCardsCount: 4,
+  },
+  {
+    name: '상파울루',
+    color: 'Yellow',
+    infectionCardsCount: 3,
+    playerCardsCount: 4,
+  },
+  {
+    name: '런던',
+    color: 'Blue',
+    infectionCardsCount: 3,
+    playerCardsCount: 4,
+  },
+  {
+    name: '이스탄불',
+    color: 'Black',
+    infectionCardsCount: 3,
+    playerCardsCount: 4,
+  },
+  {
+    name: '트리폴리',
+    color: 'Black',
+    infectionCardsCount: 3,
+    playerCardsCount: 4,
+  },
+  {
+    name: '카이로',
+    color: 'Black',
+    infectionCardsCount: 3,
+    playerCardsCount: 4,
+  },
+  {
+    name: '라고스',
+    color: 'Yellow',
+    infectionCardsCount: 3,
+    playerCardsCount: 4,
+  },
+];
 
-export interface ZoneCityCount {
+type CityColor = 'Red' | 'Blue' | 'Yellow' | 'Black';
+
+type CityInfo = {
+  name: string;
+  color: CityColor;
+  infectionCardsCount: number;
+  playerCardsCount: number;
+}
+
+export interface CityCardsSnapshot {
   name: string;
   count: number;
 }
 
-export interface DeckLayer {
-  id: number;
-  position: number;
-  cities: ZoneCityCount[];
-  total: number;
-}
-
-export interface DeckSnapshot {
-  revision: number;
-  zoneA: ZoneCityCount[];
-  zoneBLayers: DeckLayer[];
-  zoneC: ZoneCityCount[];
-  zoneD: ZoneCityCount[];
-  totals: Record<Zone | 'total', number>;
-}
-
-type CityState = {
+type InfectionCityCardsState = {
   name: string;
+  color: CityColor;
   discard: number;
   safe: number;
   pending: number;
 };
 
-type HotLayer = {
-  id: number;
-  cards: Record<string, number>;
-};
-
-type DeckStorage = {
-  cityOrder: string[];
-  cities: Record<string, CityState>;
-  hotLayers: HotLayer[];
-  nextLayerId: number;
+// State of the game at specific moment.
+type GameState = {
   revision: number;
-  history: DeckHistoryEntry[];
+
+  cityInfos: CityInfo[];
+  infectionCityCardsStates: InfectionCityCardsState[];
+  zoneBLayers: CityCardsSnapshot[][];
+
+  playerPiles: number[];
+  playerCityCounts: CityCardsSnapshot[];
+  playerEventsRemaining: number;
 };
 
-type DeckHistoryEntry = {
-  cityOrder: string[];
-  cities: Record<string, CityState>;
-  hotLayers: HotLayer[];
-  nextLayerId: number;
+// Total data for DB storage, contains state history
+type GameStorage = GameState[];
+
+// UI related Data. Only GameSnapshot is sent to frontend
+export interface GameSnapshot {
   revision: number;
-};
 
-type StateMutation = (state: DeckStorage) => void;
+  zoneA: CityCardsSnapshot[];
+  zoneBLayers: CityCardsSnapshot[][];
+  zoneC: CityCardsSnapshot[];
+  zoneD: CityCardsSnapshot[];
+  
+  playerPiles: number[];
+  playerCityCounts: CityCardsSnapshot[];
+  playerEventsRemaining: number;
+}
+
+type StateMutation = (state: GameState) => void;
 
 const hasKv =
   typeof process.env.KV_REST_API_URL === 'string' ||
   typeof process.env.KV_URL === 'string' ||
   typeof process.env.UPSTASH_REDIS_REST_URL === 'string';
 
-let memoryState: DeckStorage | null = null;
+let memoryStorage: GameStorage | null = null;
+
 // Serialise state operations so concurrent requests cannot overwrite each other.
 let stateQueue: Promise<void> = Promise.resolve();
 
@@ -94,182 +140,122 @@ function normaliseCityName(name: string) {
   return name.trim();
 }
 
-function createInitialState(): DeckStorage {
-  const state: DeckStorage = {
-    cityOrder: [],
-    cities: {},
-    hotLayers: [],
-    nextLayerId: 1,
+function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?: number): GameState {
+  players = players ?? 4;
+  eventCount = eventCount ?? 4;
+
+  const initialDraws = players == 3 ? 9 : 8;
+  const cityCards = cityInfos.reduce((acc, cityInfo) => acc + cityInfo.playerCardsCount, 0);
+  const epidemicCards = 5;
+  const remaining = cityCards + eventCount + epidemicCards - initialDraws;
+  
+  // Split remaining into 5 piles as evenly as possible, larger piles on top
+  const base = Math.floor(remaining / 5);
+  let extra = remaining % 5;
+  const fivePiles: number[] = [];
+  for (let i = 0; i < 5; i += 1) {
+    const size = base + (extra > 0 ? 1 : 0);
+    if (extra > 0) extra -= 1;
+    fivePiles.push(size + 1); // +1 epidemic per pile
+  }
+
+  const state: GameState = {
     revision: 0,
-    history: []
+    cityInfos: cloneState(cityInfos),
+    infectionCityCardsStates: cityInfos.map((cityInfo) => ({
+      name: cityInfo.name,
+      color: cityInfo.color,
+      discard: 0,
+      safe: cityInfo.infectionCardsCount,
+      pending: 0,
+    })),
+    zoneBLayers: [],
+    
+    playerPiles: [initialDraws, ...fivePiles],
+    playerCityCounts: cityInfos.map((cityInfo) => ({
+      name: cityInfo.name,
+      count: cityInfo.playerCardsCount
+    })),
+    playerEventsRemaining: eventCount,
   };
 
-  INITIAL_CITIES.forEach((city) => ensureCityExists(state, city));
   return state;
 }
 
-function ensureStateShape(raw: unknown): DeckStorage {
-  const state = raw as DeckStorage & {
-    revision?: number;
-    nextLayerId?: number;
-    cityOrder?: string[];
-    cities?: Record<string, CityState>;
-    hotLayers?: HotLayer[];
-    history?: DeckHistoryEntry[];
-  };
-
-  if (!Array.isArray(state.cityOrder)) {
-    state.cityOrder = [];
-  }
-
-  if (!state.cities || typeof state.cities !== 'object') {
-    state.cities = {};
-  }
-  // Ensure per-city shape
-  Object.keys(state.cities).forEach((key) => {
-    const c = state.cities[key] as Partial<CityState> & { name?: string };
-    if (!c || typeof c !== 'object') {
-      delete (state.cities as any)[key];
-      return;
-    }
-    if (typeof c.name !== 'string') {
-      (c as any).name = key;
-    }
-    if (typeof c.discard !== 'number' || !Number.isFinite(c.discard)) {
-      (c as any).discard = 0;
-    }
-    if (typeof c.safe !== 'number' || !Number.isFinite(c.safe)) {
-      (c as any).safe = 0;
-    }
-    if (typeof (c as any).pending !== 'number' || !Number.isFinite((c as any).pending)) {
-      (c as any).pending = 0;
-    }
-    (state.cities as any)[key] = c as CityState;
-  });
-
-  if (!Array.isArray(state.hotLayers)) {
-    state.hotLayers = [];
-  }
-
-  if (!Array.isArray(state.history)) {
-    state.history = [];
-  }
-
-  // Clamp history size and shapes
-  state.history = state.history
-    .filter(
-      (h) =>
-        h &&
-        Array.isArray(h.cityOrder) &&
-        h.cities && typeof h.cities === 'object' &&
-        Array.isArray(h.hotLayers) &&
-        typeof h.nextLayerId === 'number' &&
-        typeof h.revision === 'number'
-    )
-    .slice(-20);
-
-  if (typeof state.nextLayerId !== 'number' || state.nextLayerId < 1) {
-    state.nextLayerId = 1;
-  }
-
-  if (typeof state.revision !== 'number' || !Number.isFinite(state.revision)) {
-    state.revision = 0;
-  }
-
-  return state as DeckStorage;
-}
-
-async function loadState(): Promise<DeckStorage> {
+async function loadStorage(): Promise<GameStorage> {
   if (hasKv) {
-    const stored = await kv.get<DeckStorage>(KV_DECK_KEY);
+    const stored = await kv.get<GameStorage>(KV_DECK_KEY);
     if (stored) {
-      return ensureStateShape(cloneState(stored));
+      return cloneState(stored);
     }
-    const initial = createInitialState();
+    const initial = [createInitialState(INITIAL_CITIES)];
     await kv.set(KV_DECK_KEY, initial);
-    return ensureStateShape(cloneState(initial));
+    return cloneState(initial);
   }
 
-  if (!memoryState) {
-    memoryState = createInitialState();
+  if (!memoryStorage) {
+    memoryStorage = [createInitialState(INITIAL_CITIES)];
   }
 
-  return ensureStateShape(cloneState(memoryState));
+  return cloneState(memoryStorage);
 }
 
-async function saveState(state: DeckStorage) {
+async function saveStorage(storage: GameStorage) {
   if (hasKv) {
-    await kv.set(KV_DECK_KEY, state);
+    await kv.set(KV_DECK_KEY, storage);
     return;
   }
 
-  memoryState = cloneState(state);
+  memoryStorage = cloneState(storage);
 }
 
-async function updateState(mutator: StateMutation): Promise<DeckSnapshot> {
+function getCurrentState(storage: GameStorage): GameState {
+  return storage[storage.length - 1];
+}
+
+async function updateState(mutator: StateMutation): Promise<GameSnapshot> {
   return enqueueStateWork(async () => {
-    const state = await loadState();
-    pushHistory(state);
-    mutator(state);
-    cleanupEmptyLayers(state);
-    state.revision += 1;
-    await saveState(state);
-    return buildSnapshot(state);
+    let storage = await loadStorage();
+
+    let newState = cloneState(getCurrentState(storage));
+    mutator(newState);
+    cleanupEmptyLayers(newState);
+    newState.revision += 1;
+
+    storage = [...storage, newState];
+    if (storage.length > 20)
+      storage.splice(0, storage.length - 20);
+
+    await saveStorage(storage);
+    return buildSnapshot(newState);
   });
 }
 
-function snapshotForHistory(state: DeckStorage): DeckHistoryEntry {
-  return {
-    cityOrder: cloneState(state.cityOrder),
-    cities: cloneState(state.cities),
-    hotLayers: cloneState(state.hotLayers),
-    nextLayerId: state.nextLayerId,
-    revision: state.revision
-  };
+export async function undoLastOperation(): Promise<GameSnapshot> {
+  return enqueueStateWork(async () => {
+    const storage = await loadStorage();
+    if (storage.length <= 1) {
+      throw new Error('되돌릴 내역이 없습니다.');
+    }
+    const currentState = cloneState(getCurrentState(storage));
+    storage.pop();
+    storage[storage.length - 1].revision = currentState.revision + 1;
+    await saveStorage(storage);
+    return buildSnapshot(getCurrentState(storage));
+  });
 }
 
-function pushHistory(state: DeckStorage) {
-  // Add current state to history; keep only last 20 entries
-  state.history.push(snapshotForHistory(state));
-  if (state.history.length > 20) {
-    state.history.splice(0, state.history.length - 20);
-  }
-}
-
-function ensureCityExists(state: DeckStorage, name: string, initialSafe?: number) {
-  const key = normaliseCityName(name);
-
-  if (!key) {
-    throw new Error('도시 이름이 필요합니다.');
-  }
-
-  if (!state.cities[key]) {
-    state.cities[key] = {
-      name: key,
-      discard: 0,
-      safe:
-        typeof initialSafe === 'number' && Number.isFinite(initialSafe) && initialSafe > 0
-          ? Math.floor(initialSafe)
-          : 3,
-      pending: 0
-    };
-    state.cityOrder.push(key);
-  }
-
-  return state.cities[key];
-}
-
-function cleanupEmptyLayers(state: DeckStorage) {
-  for (let index = state.hotLayers.length - 1; index >= 0; index -= 1) {
-    const layer = state.hotLayers[index];
-    const hasCards = Object.values(layer.cards).some((count) => count > 0);
+function cleanupEmptyLayers(state: GameState) {
+  for (let index = state.zoneBLayers.length - 1; index >= 0; index -= 1) {
+    const layer = state.zoneBLayers[index];
+    const hasCards = layer.some((city) => city.count > 0);
     if (!hasCards) {
-      state.hotLayers.splice(index, 1);
+      state.zoneBLayers.splice(index, 1);
     }
   }
 }
 
-function sortCities(list: ZoneCityCount[]): ZoneCityCount[] {
+function sortCities(list: CityCardsSnapshot[]): CityCardsSnapshot[] {
   return [...list].sort((a, b) => {
     const diff = b.count - a.count;
     if (diff !== 0) {
@@ -279,264 +265,203 @@ function sortCities(list: ZoneCityCount[]): ZoneCityCount[] {
   });
 }
 
-function computeTotals(state: DeckStorage): Record<Zone | 'total', number> {
-  const totals: Record<Zone | 'total', number> = {
-    A: 0,
-    B: 0,
-    C: 0,
-    total: 0
-  };
-
-  Object.values(state.cities).forEach((city) => {
-    totals.A += city.discard;
-    totals.C += city.safe;
-  });
-
-  state.hotLayers.forEach((layer) => {
-    Object.values(layer.cards).forEach((count) => {
-      totals.B += count;
-    });
-  });
-
-  totals.total = totals.A + totals.B + totals.C;
-  return totals;
-}
-
-function buildZoneA(state: DeckStorage): ZoneCityCount[] {
-  const list = state.cityOrder.map((key) => {
-    const city = state.cities[key];
-    if (!city) {
+function buildZoneA(state: GameState): CityCardsSnapshot[] {
+  const list = state.cityInfos.map((cityInfo) => {
+    const infectionCityCardsState = state.infectionCityCardsStates.find((state) => state.name == cityInfo.name);
+    if (!infectionCityCardsState) {
       throw new Error('도시 데이터를 찾을 수 없습니다.');
     }
 
     return {
-      name: city.name,
-      count: city.discard
+      name: infectionCityCardsState.name,
+      count: infectionCityCardsState.discard
     };
   });
 
   return sortCities(list);
 }
 
-function buildZoneC(state: DeckStorage): ZoneCityCount[] {
-  const list = state.cityOrder.map((key) => {
-    const city = state.cities[key];
-    if (!city) {
+function buildZoneC(state: GameState): CityCardsSnapshot[] {
+  const list = state.cityInfos.map((cityInfo) => {
+    const infectionCityCardsState = state.infectionCityCardsStates.find((state) => state.name == cityInfo.name);
+    if (!infectionCityCardsState) {
       throw new Error('도시 데이터를 찾을 수 없습니다.');
     }
 
     return {
-      name: city.name,
-      count: city.safe
+      name: infectionCityCardsState.name,
+      count: infectionCityCardsState.safe
     };
   });
 
   return sortCities(list);
 }
 
-function buildZoneD(state: DeckStorage): ZoneCityCount[] {
-  const list = state.cityOrder.map((key) => {
-    const city = state.cities[key];
-    if (!city) {
+function buildZoneD(state: GameState): CityCardsSnapshot[] {
+  const list = state.cityInfos.map((cityInfo) => {
+    const infectionCityCardsState = state.infectionCityCardsStates.find((state) => state.name == cityInfo.name);
+    if (!infectionCityCardsState) {
       throw new Error('도시 데이터를 찾을 수 없습니다.');
     }
 
     return {
-      name: city.name,
-      count: city.pending ?? 0
+      name: infectionCityCardsState.name,
+      count: infectionCityCardsState.pending
     };
   });
 
   return sortCities(list).filter((c) => c.count > 0);
 }
 
-function buildZoneBLayers(state: DeckStorage): DeckLayer[] {
-  return state.hotLayers.map((layer, index) => {
-    const cities = sortCities(
-      Object.entries(layer.cards).map(([name, count]) => ({
-        name,
-        count
-      }))
-    );
-
-    const total = cities.reduce((sum, city) => sum + city.count, 0);
-
-    return {
-      id: layer.id,
-      position: index + 1,
-      cities,
-      total
-    };
-  });
+function buildZoneBLayers(state: GameState): CityCardsSnapshot[][] {
+  return cloneState(state.zoneBLayers);
 }
 
-function buildSnapshot(state: DeckStorage): DeckSnapshot {
+function buildSnapshot(state: GameState): GameSnapshot {
   return {
     revision: state.revision,
     zoneA: buildZoneA(state),
     zoneBLayers: buildZoneBLayers(state),
     zoneC: buildZoneC(state),
     zoneD: buildZoneD(state),
-    totals: computeTotals(state)
+
+    playerPiles: cloneState(state.playerPiles),
+    playerCityCounts: cloneState(state.playerCityCounts),
+    playerEventsRemaining: state.playerEventsRemaining,
   };
 }
 
-export async function getDeckSnapshot(): Promise<DeckSnapshot> {
+export async function getGameSnapshot(): Promise<GameSnapshot> {
   return enqueueStateWork(async () => {
-    const state = await loadState();
-    return buildSnapshot(state);
+    const storage = await loadStorage();
+    return buildSnapshot(getCurrentState(storage));
   });
 }
 
-export async function incrementDiscard(cityName: string): Promise<DeckSnapshot> {
-  return updateState((state) => {
-    const city = ensureCityExists(state, cityName);
+function getInfectionCityCardsState(state: GameState, cityname: string): InfectionCityCardsState {
+  const result = state.infectionCityCardsStates.find((state) => state.name == cityname);
 
-    const topLayer = state.hotLayers[0];
-    if (topLayer) {
-      const current = topLayer.cards[city.name] ?? 0;
-      if (current <= 0) {
-        throw new Error(`현재 B1 층에 ${city.name} 카드가 없습니다.`);
+  if (result === undefined)
+    throw new Error('해당하는 도시의 감염 카드 정보가 없습니다.');
+
+  return result
+}
+
+export async function discardInfectionCard(cityName: string): Promise<GameSnapshot> {
+  return updateState((state) => {
+    const cityState = getInfectionCityCardsState(state, cityName);
+
+    if (state.zoneBLayers.length <= 0) {
+      if (cityState.safe <= 0) {
+        throw new Error(`${cityState.name} 도시에 남은 카드가 없습니다.`);
       }
-      if (current > 1) {
-        topLayer.cards[city.name] = current - 1;
-      } else {
-        delete topLayer.cards[city.name];
-      }
+      cityState.safe -= 1;
     } else {
-      if (city.safe <= 0) {
-        throw new Error(`${city.name} 도시에 남은 카드가 없습니다.`);
+      const topLayer = state.zoneBLayers[0];
+
+      const current = topLayer.find((city) => city.name == cityName);
+      if (current === undefined || current.count <= 0 ) {
+        throw new Error(`현재 B1 층에 ${cityState.name} 카드가 없습니다.`);
       }
-      city.safe -= 1;
+      
+      current.count -= 1;
     }
 
-    city.discard += 1;
+    cityState.discard += 1;
   });
 }
 
-export async function triggerEpidemic(
-  cityName: string
-): Promise<DeckSnapshot> {
+export async function triggerEpidemic(cityName: string): Promise<GameSnapshot> {
   return updateState((state) => {
-    const city = ensureCityExists(state, cityName);
+    const cityState = getInfectionCityCardsState(state, cityName);
 
-    if (city.safe <= 0) {
-      throw new Error(`${city.name} 도시에 C 영역 카드가 없습니다.`);
+    if (cityState.safe <= 0) {
+      throw new Error(`${cityState.name} 도시에 C 영역 카드가 없습니다.`);
     }
 
-    city.safe -= 1;
-    city.discard += 1;
+    cityState.safe -= 1;
+    cityState.discard += 1;
 
-    const newLayerCards: Record<string, number> = {};
+    const newLayerCards: CityCardsSnapshot[] = [];
 
-    Object.values(state.cities).forEach((entry) => {
+    state.infectionCityCardsStates.forEach((entry) => {
       if (entry.discard > 0) {
-        newLayerCards[entry.name] = entry.discard;
+        newLayerCards.push({name: entry.name, count: entry.discard})
         entry.discard = 0;
       }
     });
 
     const hasCards = Object.keys(newLayerCards).length > 0;
-
     if (!hasCards) {
       throw new Error('전염 카드 처리 중 오류가 발생했습니다.');
     }
 
-    const layerId = state.nextLayerId;
-    state.nextLayerId += 1;
-    state.hotLayers.unshift({
-      id: layerId,
-      cards: newLayerCards
-    });
+    state.zoneBLayers = [newLayerCards, ...state.zoneBLayers];
   });
 }
 
-export async function addCity(cityName: string, count: number): Promise<DeckSnapshot> {
+export async function addCity(
+  cityName: string,
+  count: number,
+  color: 'Red' | 'Blue' | 'Yellow' | 'Black'
+): Promise<GameSnapshot> {
   return updateState((state) => {
     if (typeof count !== 'number' || !Number.isFinite(count) || count <= 0) {
       throw new Error('감염 카드 장수는 1 이상이어야 합니다.');
     }
+
     const key = normaliseCityName(cityName);
     if (!key) {
       throw new Error('도시 이름이 필요합니다.');
     }
-    if (state.cities[key]) {
+
+    const result = state.infectionCityCardsStates.find((state) => state.name == key);
+    if (result !== undefined)
       throw new Error('이미 존재하는 도시입니다.');
+
+    // Only update city infos because updated city info will be affected when new game started (for both infection card and player card)
+    state.cityInfos.push({name: cityName, color: color, playerCardsCount: count, infectionCardsCount: count});
+  });
+}
+
+export async function resetToInitial(): Promise<GameSnapshot> {
+  return updateState((state) => {
+    return createInitialState(INITIAL_CITIES);
+  });
+}
+
+export async function startNewGame(params?: { players?: number; eventCount?: number }): Promise<GameSnapshot> {
+  return updateState((state) => {
+    return createInitialState(state.cityInfos, params?.players, params?.eventCount);
+  });
+}
+
+function drawFromTopPile(state: GameState) {
+  const idx = state.playerPiles.findIndex((c) => c > 0);
+  if (idx === -1) {
+    throw new Error('플레이어 덱에 남은 카드가 없습니다.');
+  }
+  state.playerPiles[idx] -= 1;
+}
+
+export async function drawPlayerCity(cityName: string): Promise<GameSnapshot> {
+  return updateState((state) => {
+    const key = normaliseCityName(cityName);
+    const current = state.playerCityCounts.find((city) => city.name == key);
+    if (current === undefined || current.count <= 0) {
+      throw new Error(`${key} 도시 카드가 남아있지 않습니다.`);
     }
-    const city = ensureCityExists(state, key, 0);
-    city.pending = Math.floor(count);
+    current.count -= 1;
+    drawFromTopPile(state);
   });
 }
 
-export async function resetToInitial(): Promise<DeckSnapshot> {
-  return enqueueStateWork(async () => {
-    const state = await loadState();
-    pushHistory(state);
-    const initial = createInitialState();
-    state.cityOrder = initial.cityOrder;
-    state.cities = initial.cities;
-    state.hotLayers = initial.hotLayers;
-    state.nextLayerId = initial.nextLayerId;
-    state.revision += 1;
-    await saveState(state);
-    return buildSnapshot(state);
-  });
-}
-
-export async function startNewGame(): Promise<DeckSnapshot> {
-  return enqueueStateWork(async () => {
-    const state = await loadState();
-    pushHistory(state);
-
-    const totalByCity: Record<string, number> = {};
-    // Start with A and C
-    Object.values(state.cities).forEach((city) => {
-      totalByCity[city.name] = (city.safe ?? 0) + (city.discard ?? 0);
-    });
-    // Add B layers
-    state.hotLayers.forEach((layer) => {
-      Object.entries(layer.cards).forEach(([name, count]) => {
-        totalByCity[name] = (totalByCity[name] ?? 0) + (count ?? 0);
-      });
-    });
-    // Include pending cards (D-zone) to be added at new game
-    Object.values(state.cities).forEach((city) => {
-      if (city.pending && city.pending > 0) {
-        totalByCity[city.name] = (totalByCity[city.name] ?? 0) + city.pending;
-      }
-    });
-
-    // Reset deck: all cards go back to C according to current totals
-    Object.values(state.cities).forEach((city) => {
-      const total = totalByCity[city.name] ?? 0;
-      city.discard = 0;
-      city.safe = total;
-      city.pending = 0;
-    });
-
-    // Clear B layers and reset layer id sequence
-    state.hotLayers = [];
-    state.nextLayerId = 1;
-
-    state.revision += 1;
-    await saveState(state);
-    return buildSnapshot(state);
-  });
-}
-
-export async function undoLastOperation(): Promise<DeckSnapshot> {
-  return enqueueStateWork(async () => {
-    const state = await loadState();
-    if (!state.history || state.history.length === 0) {
-      throw new Error('되돌릴 내역이 없습니다.');
+export async function drawPlayerEvent(): Promise<GameSnapshot> {
+  return updateState((state) => {
+    if (state.playerEventsRemaining <= 0) {
+      throw new Error('이벤트 카드가 남아있지 않습니다.');
     }
-    const prev = state.history.pop() as DeckHistoryEntry;
-    state.cityOrder = cloneState(prev.cityOrder);
-    state.cities = cloneState(prev.cities);
-    state.hotLayers = cloneState(prev.hotLayers);
-    state.nextLayerId = prev.nextLayerId;
-    state.revision += 1;
-    await saveState(state);
-    return buildSnapshot(state);
+    state.playerEventsRemaining -= 1;
+    drawFromTopPile(state);
   });
 }

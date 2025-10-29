@@ -129,6 +129,46 @@ function mergeProbs(a: CityProbability[], b: CityProbability[]): CityProbability
   });
 }
 
+function addProbs(a: CityProbability[], b: CityProbability[]): CityProbability[] {
+  const names = [...a, ...b].map((city) => city.name).filter((name, index, arr) => arr.indexOf(name) == index);
+  return names.map((name): CityProbability => {
+    const a_probs = a.find((prob) => prob.name == name);
+    const b_probs = b.find((prob) => prob.name == name);
+
+    if (a_probs !== undefined && b_probs !== undefined) {
+      let draws: {[k: number]: number} = {};
+
+      for (const prob of a_probs.probs) {
+        if (prob.draw in draws)
+          draws[prob.draw] += prob.probability;
+        else
+          draws[prob.draw] = prob.probability;
+      }
+
+      for (const prob of b_probs.probs) {
+        if (prob.draw in draws)
+          draws[prob.draw] += prob.probability;
+        else
+          draws[prob.draw] = prob.probability;
+      }
+
+      return {
+        name: name,
+        probs: Object.keys(draws).map((draw) => parseInt(draw)).sort((a, b) => a - b).map((draw) => ({draw: draw, probability: draws[draw]})),
+      };
+    } else if (a_probs !== undefined) {
+      return a_probs;
+    } else if (b_probs !== undefined) {
+      return b_probs;
+    }
+
+    return {
+      name: name,
+      probs: [],
+    }
+  });
+}
+
 export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number): CityProbability[] {
   let left = numDraw;
   let result: CityProbability[] = [];
@@ -147,4 +187,23 @@ export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number): C
     throw new Error(`Not enough cards for drawing ${numDraw} cards in piles: ${piles.toString()}`);
 
   return sortCityProbabilities(result);
+}
+
+export function calculateEpidemicProbs(
+  zoneA: CityCardsSnapshot[],
+  zoneBLayers: CityCardsSnapshot[][],
+  zoneC: CityCardsSnapshot[],
+  numDraw: number
+): CityProbability[] {
+  const zoneCTotal = zoneC.reduce((acc, city) => acc + city.count, 0);
+
+  const probs_arr = zoneC.filter((cityZoneC) => cityZoneC.count > 0).map((cityZoneC) => {
+    let copiedZoneC = [...zoneC];
+    const zoneCprob = 1.0 * cityZoneC.count / zoneCTotal;
+
+    const probs = calculateProbs([zoneA, ...zoneBLayers, copiedZoneC], numDraw);
+    return probs.map((prob): CityProbability => ({ name: prob.name, probs: prob.probs.map((p) => ({draw: p.draw, probability: p.probability * zoneCprob}))}));
+  });
+
+  return probs_arr.reduce((acc: CityProbability[], probs: CityProbability[]) => addProbs(acc, probs), []);
 }

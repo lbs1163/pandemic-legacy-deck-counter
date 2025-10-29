@@ -8,7 +8,7 @@ import {
 } from '@/lib/deckState';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { calculateProbs, CityProbability } from './utils';
+import { calculateEpidemicProbs, calculateProbs, CityProbability } from './utils';
 
 type DeckData = GameSnapshot;
 
@@ -252,11 +252,19 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   const cityProbabilities = useMemo(() => {
     const probs = calculateProbs([...deck.zoneBLayers, deck.zoneC], numDraw);
 
-    return {
-      nonEpidemic: probs,
-      epidemic: probs
-    };
-  }, [deck.zoneA, deck.zoneBLayers, deck.zoneC, numDraw]);
+    if (canTriggerEpidemic == false)
+      return {
+        nonEpidemic: probs,
+        epidemic: []
+      };
+    else {
+      const epidemicProbs = calculateEpidemicProbs(deck.zoneA, deck.zoneBLayers, deck.zoneC, numDraw);
+      return {
+        nonEpidemic: probs,
+        epidemic: epidemicProbs,
+      }
+    }
+  }, [canTriggerEpidemic, deck.zoneA, deck.zoneBLayers, deck.zoneC, numDraw]);
 
   const probabilityFormatter = useMemo(
     () =>

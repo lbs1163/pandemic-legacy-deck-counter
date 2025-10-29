@@ -34,18 +34,18 @@ function calcDrawProbability(total: number, count: number, draw: number, numDraw
   return 1.0 * targetComb / totalComb;
 }
 
-function calculatePileProbs(cities: CityCardsSnapshot[], numDraw: number): { remaining: number, cityProbs: CityProbability[] } {
+function calculatePileProbs(pile: CityCardsSnapshot[], numDraw: number): { remaining: number, cityProbs: CityProbability[] } {
   if (numDraw < 1)
     throw new Error('numDraw should be at least 1.');
 
   // 1, 2, ..., numDraw
   const draws = [...Array(numDraw).keys()].map((i) => i + 1);
 
-  const total = cities.reduce((acc, city) => acc + city.count, 0);
+  const total = pile.reduce((acc, city) => acc + city.count, 0);
   if (total <= numDraw) {
     return ({
       remaining: numDraw - total,
-      cityProbs: cities.map((city) => ({
+      cityProbs: pile.map((city) => ({
         name: city.name,
         probs: draws.map((draw) => ({
           draw: draw,
@@ -56,7 +56,7 @@ function calculatePileProbs(cities: CityCardsSnapshot[], numDraw: number): { rem
   } else {
     return ({
       remaining: numDraw - total,
-      cityProbs: cities.map((city) => ({
+      cityProbs: pile.map((city) => ({
         name: city.name,
         probs: draws.map((draw) => ({
           draw: draw,
@@ -88,6 +88,26 @@ function sortCityProbabilities(cityProbs: CityProbability[]) {
   });
 }
 
-export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number): CityProbability[] {
+function mergeProbs(a: CityProbability[], b: CityProbability[]): CityProbability[] {
   return [];
+}
+
+export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number): CityProbability[] {
+  let left = numDraw;
+  let result: CityProbability[] = [];
+
+  for (const pile of piles) {
+    let { remaining, cityProbs } = calculatePileProbs(pile, left);
+
+    left = remaining;
+    result = mergeProbs(result, cityProbs);
+    
+    if (left <= 0)
+      break;
+  }
+
+  if (left > 0)
+    throw new Error(`Not enough cards for drawing ${numDraw} cards in piles: ${piles.toString()}`);
+
+  return result;
 }

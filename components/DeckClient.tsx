@@ -8,17 +8,17 @@ type DeckData = GameSnapshot;
 
 const ZONE_INFO = {
   A: {
-    title: 'A · 버려진 더미',
+    title: '버려진 감염 카드',
     description: '이미 공개된 감염 카드',
     accent: '#f87171'
   },
   B: {
-    title: 'B · 혼합된 상단',
+    title: '다시 섞인 감염 카드',
     description: '전염 카드 후 위쪽에 쌓인 카드 (위 레이어부터 순서대로)',
     accent: '#fb923c'
   },
   C: {
-    title: 'C · 안전한 덱',
+    title: '미공개 감염 카드',
     description: '아직 공개되지 않은 감염 카드',
     accent: '#60a5fa'
   },

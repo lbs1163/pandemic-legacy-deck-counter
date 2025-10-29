@@ -611,21 +611,21 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                 </div>
               ))}
             </div>
-          </div>
-          <div className="playerColorTotals">
-            {CITY_COLOR_ORDER.map((color) => (
-              <div key={color} className={`playerColorTotalsItem color-${color.toLowerCase()}`}>
-                <span>
-                  <span
-                    className="cityColorDot"
-                    style={{ background: CITY_COLOR_HEX[color] }}
-                    aria-hidden="true"
-                  />
-                  <span className="colorLabel">{CITY_COLOR_LABELS[color]}</span>
-                </span>
-                <span className="colorCount">{playerCityColorTotals[color]} 장</span>
-              </div>
-            ))}
+            <div className="playerColorTotals">
+              {CITY_COLOR_ORDER.map((color) => (
+                <div key={color} className={`playerColorTotalsItem color-${color.toLowerCase()}`}>
+                  <span>
+                    <span
+                      className="cityColorDot"
+                      style={{ background: CITY_COLOR_HEX[color] }}
+                      aria-hidden="true"
+                    />
+                    <span className="colorLabel">{CITY_COLOR_LABELS[color]}</span>
+                  </span>
+                  <span className="colorCount">{playerCityColorTotals[color]} 장</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
         <section>

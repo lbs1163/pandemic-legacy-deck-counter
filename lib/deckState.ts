@@ -264,8 +264,29 @@ function cleanupEmptyLayers(state: GameState) {
   }
 }
 
-function sortCities(list: CityCardsSnapshot[]): CityCardsSnapshot[] {
+const CITY_COLOR_PRIORITY = new Map(
+  CITY_COLOR_ORDER.map((color, index) => [color, index] as const)
+);
+
+function sortCities(state: GameState, list: CityCardsSnapshot[]): CityCardsSnapshot[] {
+  const cityColorMap = new Map<string, CityColor>();
+  state.cityInfos.forEach((cityInfo) => cityColorMap.set(cityInfo.name, cityInfo.color));
+
+  const fallbackPriority = CITY_COLOR_ORDER.length;
+
   return [...list].sort((a, b) => {
+    const colorA = cityColorMap.get(a.name);
+    const colorB = cityColorMap.get(b.name);
+
+    const priorityA =
+      colorA !== undefined ? CITY_COLOR_PRIORITY.get(colorA) ?? fallbackPriority : fallbackPriority;
+    const priorityB =
+      colorB !== undefined ? CITY_COLOR_PRIORITY.get(colorB) ?? fallbackPriority : fallbackPriority;
+
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
     return a.name.localeCompare(b.name, 'ko');
   });
 }
@@ -280,7 +301,7 @@ function buildZoneA(state: GameState): CityCardsSnapshot[] {
     };
   });
 
-  return sortCities(list);
+  return sortCities(state, list);
 }
 
 function buildZoneC(state: GameState): CityCardsSnapshot[] {
@@ -293,7 +314,7 @@ function buildZoneC(state: GameState): CityCardsSnapshot[] {
     };
   });
 
-  return sortCities(list);
+  return sortCities(state, list);
 }
 
 function buildZoneD(state: GameState): CityCardsSnapshot[] {
@@ -306,11 +327,11 @@ function buildZoneD(state: GameState): CityCardsSnapshot[] {
     };
   });
 
-  return sortCities(list).filter((c) => c.count > 0);
+  return sortCities(state, list).filter((c) => c.count > 0);
 }
 
 function buildZoneBLayers(state: GameState): CityCardsSnapshot[][] {
-  return cloneState(state.zoneBLayers).map((cityState) => sortCities(cityState));
+  return cloneState(state.zoneBLayers).map((cityState) => sortCities(state, cityState));
 }
 
 function buildSnapshot(state: GameState): GameSnapshot {
@@ -322,7 +343,7 @@ function buildSnapshot(state: GameState): GameSnapshot {
     zoneD: buildZoneD(state),
 
     playerPiles: cloneState(state.playerPiles),
-    playerCityCounts: sortCities(state.playerCityCounts),
+    playerCityCounts: sortCities(state, state.playerCityCounts),
     playerEventCounts: state.playerEventCounts,
     playerEpidemicCounts: state.playerEpidemicCounts,
     cityInfos: cloneState(state.cityInfos),

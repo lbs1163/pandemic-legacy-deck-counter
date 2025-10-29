@@ -369,41 +369,10 @@ export async function discardInfectionCard(cityName: string): Promise<GameSnapsh
   });
 }
 
-export async function triggerEpidemic(cityName: string): Promise<GameSnapshot> {
-  return updateState((state) => {
-    const cityState = getInfectionCityCardsState(state, cityName);
-
-    if (cityState.safe <= 0) {
-      throw new Error(`${cityState.name} 도시에 C 영역 카드가 없습니다.`);
-    }
-
-    cityState.safe -= 1;
-    cityState.discard += 1;
-
-    const newLayerCards: CityCardsSnapshot[] = [];
-
-    state.infectionCityCardsStates.forEach((entry) => {
-      if (entry.discard > 0) {
-        newLayerCards.push({name: entry.name, count: entry.discard})
-        entry.discard = 0;
-      }
-    });
-
-    const hasCards = Object.keys(newLayerCards).length > 0;
-    if (!hasCards) {
-      throw new Error('전염 카드 처리 중 오류가 발생했습니다.');
-    }
-
-    state.zoneBLayers = [newLayerCards, ...state.zoneBLayers];
-
-    return state;
-  });
-}
-
 export async function addCity(
   cityName: string,
   count: number,
-  color: 'Red' | 'Blue' | 'Yellow' | 'Black'
+  color: CityColor
 ): Promise<GameSnapshot> {
   return updateState((state) => {
     if (typeof count !== 'number' || !Number.isFinite(count) || count <= 0) {
@@ -466,6 +435,39 @@ export async function drawPlayerEvent(): Promise<GameSnapshot> {
       throw new Error('이벤트 카드가 남아있지 않습니다.');
     }
     state.playerEventCounts -= 1;
+    drawFromTopPile(state);
+
+    return state;
+  });
+}
+
+export async function drawPlayerEpidemic(bottomInfectionCityCard: string): Promise<GameSnapshot> {
+  return updateState((state) => {
+    const cityState = getInfectionCityCardsState(state, bottomInfectionCityCard);
+
+    if (cityState.safe <= 0) {
+      throw new Error(`${cityState.name} 도시에 C 영역 카드가 없습니다.`);
+    }
+
+    cityState.safe -= 1;
+    cityState.discard += 1;
+
+    const newLayerCards: CityCardsSnapshot[] = [];
+
+    state.infectionCityCardsStates.forEach((entry) => {
+      if (entry.discard > 0) {
+        newLayerCards.push({name: entry.name, count: entry.discard})
+        entry.discard = 0;
+      }
+    });
+
+    const hasCards = Object.keys(newLayerCards).length > 0;
+    if (!hasCards) {
+      throw new Error('전염 카드 처리 중 오류가 발생했습니다.');
+    }
+
+    state.zoneBLayers = [newLayerCards, ...state.zoneBLayers];
+
     drawFromTopPile(state);
 
     return state;

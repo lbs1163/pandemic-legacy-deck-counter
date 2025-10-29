@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { triggerEpidemic } from '@/lib/deckState';
+import { drawPlayerEpidemic } from '@/lib/deckState';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const snapshot = await triggerEpidemic(city);
+    const snapshot = await drawPlayerEpidemic(city);
     return NextResponse.json(snapshot);
   } catch (error) {
     if (error instanceof Error) {

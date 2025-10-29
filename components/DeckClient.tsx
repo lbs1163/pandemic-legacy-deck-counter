@@ -269,6 +269,14 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     return totals;
   }, [cityInfoMap, deck.playerCityCounts]);
 
+  const playerPileSummaries = useMemo(() => {
+    return deck.playerPiles.map((count, index) => ({
+      count,
+      index,
+      isActive: index === pileIndex && count > 0
+    }));
+  }, [deck.playerPiles, pileIndex]);
+
   const renderCityColorDot = useCallback(
     (cityName: string) => {
       const cityInfo = cityInfoMap.get(cityName);
@@ -521,9 +529,25 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
       <div className="playerZonesLayout">
         <section>
-          <p className="epidemicProbability">
-            다음 2장 중 전염 카드가 등장할 확률 <strong>{epidemicProbabilityLabel}</strong>
-          </p>
+          <div className="playerPileSummary">
+            <span className="playerPileTitle">플레이어 카드 덱 더미</span>
+            <p className="epidemicProbability">
+              다음 2장 중 전염 카드가 등장할 확률 <strong>{epidemicProbabilityLabel}</strong>
+            </p>
+            <div className="playerPileGrid">
+              {playerPileSummaries.map((pile) => (
+                <div
+                  key={pile.index}
+                  className={`playerPileItem${pile.isActive ? ' isActive' : ''}${
+                    pile.count === 0 ? ' isEmpty' : ''
+                  }`}
+                >
+                  <span className="pileLabel">{pile.index == 0 ? "초기 드로우" : `더미 ${pile.index}`}</span>
+                  <span className="pileCount">{pile.count}장</span>
+                </div>
+              ))}
+            </div>
+          </div>
           <div className="playerColorTotals">
             {CITY_COLOR_ORDER.map((color) => (
               <div key={color} className={`playerColorTotalsItem color-${color.toLowerCase()}`}>

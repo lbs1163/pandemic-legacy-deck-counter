@@ -180,6 +180,57 @@ button {
   margin: 0 0 16px;
 }
 
+.playerPileSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.playerPileTitle {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.playerPileGrid {
+  display: grid;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.playerPileItem {
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: rgba(31, 41, 55, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.playerPileItem.isActive {
+  border-color: rgba(96, 165, 250, 0.6);
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.35);
+}
+
+.playerPileItem.isEmpty {
+  opacity: 0.5;
+}
+
+.playerPileItem .pileLabel {
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.playerPileItem .pileCount {
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
 .playerColorTotalsItem {
   border-radius: 10px;
   padding: 8px 12px;

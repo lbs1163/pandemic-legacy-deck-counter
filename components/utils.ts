@@ -89,7 +89,41 @@ function sortCityProbabilities(cityProbs: CityProbability[]) {
 }
 
 function mergeProbs(a: CityProbability[], b: CityProbability[]): CityProbability[] {
-  return [];
+  const names = [...a, ...b].map((city) => city.name).filter((name, index, arr) => arr.indexOf(name) == index);
+  return names.map((name): CityProbability => {
+    const a_probs = a.find((prob) => prob.name == name);
+    const b_probs = b.find((prob) => prob.name == name);
+
+    if (a_probs !== undefined && b_probs !== undefined) {
+      let draws: {[k: number]: number} = {};
+
+      for (const a_prob of a_probs.probs) {
+        for (const b_prob of b_probs.probs) {
+          const draw = a_prob.draw + b_prob.draw;
+          const probability = a_prob.probability * b_prob.probability;
+
+          if (draw in draws)
+            draws[draw] += probability;
+          else
+            draws[draw] = probability;
+        }
+      }
+
+      return {
+        name: name,
+        probs: Object.keys(draws).map((draw) => parseInt(draw)).sort((a, b) => a - b).map((draw) => ({draw: draw, probability: draws[draw]})),
+      };
+    } else if (a_probs !== undefined) {
+      return a_probs;
+    } else if (b_probs !== undefined) {
+      return b_probs;
+    }
+
+    return {
+      name: name,
+      probs: [],
+    }
+  });
 }
 
 export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number): CityProbability[] {
@@ -101,7 +135,7 @@ export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number): C
 
     left = remaining;
     result = mergeProbs(result, cityProbs);
-    
+
     if (left <= 0)
       break;
   }

@@ -385,6 +385,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex-wrap: wrap;
   align-items: stretch;
 }
 
@@ -398,6 +399,7 @@ button {
 }
 
 .newCityNameRow {
+  flex: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -410,7 +412,7 @@ button {
 
 .newCityColorPicker {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   flex-shrink: 0;
 }

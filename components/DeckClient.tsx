@@ -507,27 +507,27 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       <section className="newCitySection">
         <h2>새롭게 공급망에 연결된 도시 추가</h2>
         <form onSubmit={handleAddCity} className="newCityForm">
+          <div className="newCityColorPicker" role="group" aria-label="도시 카드 색상">
+            {CITY_COLOR_ORDER.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`colorChip${newCityColor === color ? ' isSelected' : ''}`}
+                onClick={() => setNewCityColor(color)}
+                aria-pressed={newCityColor === color}
+                disabled={isBusy}
+                aria-label={`${CITY_COLOR_LABELS[color]} 색상`}
+                title={`${CITY_COLOR_LABELS[color]} 색상`}
+              >
+                <span
+                  className="colorChipDot"
+                  style={{ background: CITY_COLOR_HEX[color] }}
+                  aria-hidden="true"
+                />
+              </button>
+            ))}
+          </div>
           <div className="newCityNameRow">
-            <div className="newCityColorPicker" role="group" aria-label="도시 카드 색상">
-              {CITY_COLOR_ORDER.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className={`colorChip${newCityColor === color ? ' isSelected' : ''}`}
-                  onClick={() => setNewCityColor(color)}
-                  aria-pressed={newCityColor === color}
-                  disabled={isBusy}
-                  aria-label={`${CITY_COLOR_LABELS[color]} 색상`}
-                  title={`${CITY_COLOR_LABELS[color]} 색상`}
-                >
-                  <span
-                    className="colorChipDot"
-                    style={{ background: CITY_COLOR_HEX[color] }}
-                    aria-hidden="true"
-                  />
-                </button>
-              ))}
-            </div>
             <input
               type="text"
               value={newCityName}
@@ -568,6 +568,9 @@ export default function DeckClient({ initialData }: DeckClientProps) {
         <section>
           <div className="playerPileSummary">
             <span className="playerPileTitle">플레이어 카드 덱 더미</span>
+            <p className="epidemicProbability">
+              다음 2장 중 전염 카드가 등장할 확률 <strong>{epidemicProbabilityLabel}</strong>
+            </p>
             <div className="playerPileGrid">
               {playerPileSummaries.map((pile) => (
                 <div
@@ -584,9 +587,6 @@ export default function DeckClient({ initialData }: DeckClientProps) {
               ))}
             </div>
           </div>
-          <p className="epidemicProbability">
-            다음 2장 중 전염 카드가 등장할 확률 <strong>{epidemicProbabilityLabel}</strong>
-          </p>
           <div className="playerColorTotals">
             {CITY_COLOR_ORDER.map((color) => (
               <div key={color} className={`playerColorTotalsItem color-${color.toLowerCase()}`}>

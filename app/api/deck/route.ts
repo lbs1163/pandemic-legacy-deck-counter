@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getDeckSnapshot } from '@/lib/deckState';
+import { getGameSnapshot } from '@/lib/deckState';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const snapshot = await getDeckSnapshot();
+  const snapshot = await getGameSnapshot();
   return NextResponse.json(snapshot);
 }

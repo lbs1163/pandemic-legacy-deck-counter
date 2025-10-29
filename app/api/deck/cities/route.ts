@@ -9,6 +9,7 @@ export async function POST(request: Request) {
     const city = typeof body?.city === 'string' ? body.city.trim() : '';
     const countRaw = (body as any)?.count;
     const count = typeof countRaw === 'number' ? countRaw : Number.parseInt(String(countRaw), 10);
+    const color = (body as any)?.color;
 
     if (!city) {
       return NextResponse.json(
@@ -24,7 +25,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const snapshot = await addCity(city, Math.floor(count));
+    const colorOk = color === 'Red' || color === 'Blue' || color === 'Yellow' || color === 'Black' ? color : undefined;
+    const snapshot = await addCity(city, Math.floor(count), colorOk);
     return NextResponse.json(snapshot);
   } catch (error) {
     if (error instanceof Error) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { incrementDiscard } from '@/lib/deckState';
+import { discardInfectionCard } from '@/lib/deckState';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const snapshot = await incrementDiscard(city);
+    const snapshot = await discardInfectionCard(city);
     return NextResponse.json(snapshot);
   } catch (error) {
     if (error instanceof Error) {

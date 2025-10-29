@@ -2,6 +2,8 @@ import { kv } from '@vercel/kv';
 
 const KV_DECK_KEY = 'pandemic:deck-state:v1';
 
+export const CITY_COLOR_ORDER: CityColor[] = ['Blue', 'Yellow', 'Black', 'Red'];
+
 export const INITIAL_EPIDEMIC_COUNTS = 5;
 
 const INITIAL_CITIES: CityInfo[] = [
@@ -88,7 +90,7 @@ type GameState = {
   revision: number;
 
   cityInfos: CityInfo[];
-  
+
   infectionCityCardsStates: InfectionCityCardsState[];
   zoneBLayers: CityCardsSnapshot[][];
 

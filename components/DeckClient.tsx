@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  CITY_COLOR_ORDER,
   INITIAL_EPIDEMIC_COUNTS,
   type CityInfo,
   type GameSnapshot
@@ -18,8 +19,6 @@ const CITY_COLOR_LABELS: Record<CityColor, string> = {
   Yellow: '노랑',
   Black: '검정'
 };
-
-const CITY_COLOR_ORDER: CityColor[] = ['Blue', 'Yellow', 'Black', 'Red'];
 
 const CITY_COLOR_HEX: Record<CityColor, string> = {
   Red: '#f87171',

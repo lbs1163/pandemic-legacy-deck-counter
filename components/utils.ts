@@ -102,6 +102,9 @@ function mergeProbs(a: CityProbability[], b: CityProbability[]): CityProbability
           const draw = a_prob.draw + b_prob.draw;
           const probability = a_prob.probability * b_prob.probability;
 
+          if (probability == 0 && draw != 0)
+            continue;
+
           if (draw in draws)
             draws[draw] += probability;
           else

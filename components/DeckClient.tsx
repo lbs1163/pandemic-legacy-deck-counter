@@ -250,7 +250,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   }, [epidemicProbability]);
 
   const cityProbabilities = useMemo(() => {
-    const probs = calculateProbs([deck.zoneA, ...deck.zoneBLayers, deck.zoneC], numDraw);
+    const probs = calculateProbs([...deck.zoneBLayers, deck.zoneC], numDraw);
     return {
       nonEpidemic: probs,
       epidemic: probs
@@ -269,8 +269,8 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   const showingCityProbabilities: CityProbability[] = predictEpidemic
     ? cityProbabilities.epidemic
     : cityProbabilities.nonEpidemic;
-  console.log(showingCityProbabilities);
-  const cityInfoMap = useMemo(() => {
+
+    const cityInfoMap = useMemo(() => {
     const entries = new Map<string, CityInfo>();
     deck.cityInfos.forEach((info) => {
       entries.set(info.name, info);

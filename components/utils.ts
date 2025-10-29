@@ -146,5 +146,5 @@ export function calculateProbs(piles: CityCardsSnapshot[][], numDraw: number): C
   if (left > 0)
     throw new Error(`Not enough cards for drawing ${numDraw} cards in piles: ${piles.toString()}`);
 
-  return result;
+  return sortCityProbabilities(result);
 }

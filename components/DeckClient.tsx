@@ -337,6 +337,88 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
   return (
     <main className="page">
+      <header className="pageHeader">
+        <div>
+          <h1 className="pageTitle">판데믹 레거시 S2 덱 카운터</h1>
+          <p className="pageSubtitle">모든 플레이어와 덱 상태를 공유하세요.</p>
+        </div>
+        <div className="headerButtons">
+          <button
+            className="epidemicButton"
+            onClick={() => setIsEpidemicOpen(true)}
+            disabled={isBusy || epidemicCandidates.length === 0}
+          >
+            전염 카드 발동
+          </button>
+          <button
+            className="refreshButton"
+            onClick={() => void refresh()}
+            disabled={isBusy || isRefreshing}
+            aria-label="최신 상태로 새로고침"
+          >
+            {isRefreshing ? '갱신 중…' : '새로고침'}
+          </button>
+          <button
+            className="refreshButton"
+            onClick={() => void handleUndo()}
+            disabled={isBusy}
+            aria-label="되돌리기 (Ctrl+Z)"
+          >
+            되돌리기
+          </button>
+          <button
+            className="refreshButton"
+            onClick={() => void handleNewGame()}
+            disabled={isBusy}
+          >
+            새 게임
+          </button>          <button
+            className="resetButton"
+            onClick={() => void handleFullReset()}
+            disabled={isBusy}
+          >
+            덱 초기화
+          </button>
+        </div>
+      </header>
+
+      <section className="newCitySection">
+        <h2>새롭게 발견된 도시 추가</h2>
+        <form onSubmit={handleAddCity} className="newCityForm">
+          <input
+            type="text"
+            value={newCityName}
+            onChange={(event) => setNewCityName(event.target.value)}
+            placeholder="도시 이름"
+            disabled={isBusy}
+            aria-label="새 도시 이름"
+          />
+          <input
+            type="number"
+            value={newCityCount}
+            onChange={(event) => setNewCityCount(event.target.value)}
+            placeholder="카드 장수"
+            min={1}
+            step={1}
+            disabled={isBusy}
+            aria-label="감염 카드 장수"
+          />
+          <button
+            type="submit"
+            disabled={
+              isBusy ||
+              !newCityName.trim() ||
+              !Number.isFinite(Number.parseInt(newCityCount, 10)) ||
+              Number.parseInt(newCityCount, 10) <= 0
+            }
+          >
+            추가
+          </button>
+        </form>
+      </section>
+
+      {error && <p className="errorBanner">{error}</p>}
+
       <section className="playerCards">
         <div className="zoneCard" style={{ borderColor: '#8b5cf6' }}>
           <header className="zoneHeader">
@@ -383,52 +465,6 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           </ul>
         </div>
       </section>
-      <header className="pageHeader">
-        <div>
-          <h1 className="pageTitle">판데믹 레거시 S2 감염 덱</h1>
-          <p className="pageSubtitle">모든 플레이어와 덱 상태를 공유하세요.</p>
-        </div>
-        <div className="headerButtons">
-          <button
-            className="epidemicButton"
-            onClick={() => setIsEpidemicOpen(true)}
-            disabled={isBusy || epidemicCandidates.length === 0}
-          >
-            전염 카드 발동
-          </button>
-          <button
-            className="refreshButton"
-            onClick={() => void refresh()}
-            disabled={isBusy || isRefreshing}
-            aria-label="최신 상태로 새로고침"
-          >
-            {isRefreshing ? '갱신 중…' : '새로고침'}
-          </button>
-          <button
-            className="refreshButton"
-            onClick={() => void handleUndo()}
-            disabled={isBusy}
-            aria-label="되돌리기 (Ctrl+Z)"
-          >
-            되돌리기
-          </button>
-          <button
-            className="refreshButton"
-            onClick={() => void handleNewGame()}
-            disabled={isBusy}
-          >
-            새 게임
-          </button>          <button
-            className="resetButton"
-            onClick={() => void handleFullReset()}
-            disabled={isBusy}
-          >
-            덱 초기화
-          </button>
-        </div>
-      </header>
-
-      {error && <p className="errorBanner">{error}</p>}
 
       <section className="zones">
         <div
@@ -558,41 +594,6 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             </ul>
           )}
         </div>
-      </section>
-
-      <section className="newCitySection">
-        <h2>새롭게 발견된 도시 추가</h2>
-        <form onSubmit={handleAddCity} className="newCityForm">
-          <input
-            type="text"
-            value={newCityName}
-            onChange={(event) => setNewCityName(event.target.value)}
-            placeholder="도시 이름"
-            disabled={isBusy}
-            aria-label="새 도시 이름"
-          />
-          <input
-            type="number"
-            value={newCityCount}
-            onChange={(event) => setNewCityCount(event.target.value)}
-            placeholder="카드 장수"
-            min={1}
-            step={1}
-            disabled={isBusy}
-            aria-label="감염 카드 장수"
-          />
-          <button
-            type="submit"
-            disabled={
-              isBusy ||
-              !newCityName.trim() ||
-              !Number.isFinite(Number.parseInt(newCityCount, 10)) ||
-              Number.parseInt(newCityCount, 10) <= 0
-            }
-          >
-            추가
-          </button>
-        </form>
       </section>
 
       {isEpidemicOpen && (

@@ -1,10 +1,25 @@
 'use client';
 
-import { INITIAL_EPIDEMIC_COUNTS, type GameSnapshot } from '@/lib/deckState';
+import {
+  INITIAL_EPIDEMIC_COUNTS,
+  type CityInfo,
+  type GameSnapshot
+} from '@/lib/deckState';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type DeckData = GameSnapshot;
+
+type CityColor = CityInfo['color'];
+
+const CITY_COLOR_LABELS: Record<CityColor, string> = {
+  Red: '빨강',
+  Blue: '파랑',
+  Yellow: '노랑',
+  Black: '검정'
+};
+
+const CITY_COLOR_ORDER: CityColor[] = ['Blue', 'Yellow', 'Black', 'Red'];
 
 const ZONE_INFO = {
   A: {
@@ -218,6 +233,33 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     });
     return formatter.format(epidemicProbability);
   }, [epidemicProbability]);
+
+  const cityInfoMap = useMemo(() => {
+    const entries = new Map<string, CityInfo>();
+    deck.cityInfos.forEach((info) => {
+      entries.set(info.name, info);
+    });
+    return entries;
+  }, [deck.cityInfos]);
+
+  const playerCityColorTotals = useMemo(() => {
+    const totals: Record<CityColor, number> = {
+      Red: 0,
+      Blue: 0,
+      Yellow: 0,
+      Black: 0
+    };
+
+    deck.playerCityCounts.forEach((city) => {
+      const info = cityInfoMap.get(city.name);
+      if (!info) {
+        return;
+      }
+      totals[info.color] += city.count;
+    });
+
+    return totals;
+  }, [cityInfoMap, deck.playerCityCounts]);
 
   const handleIncrement = useCallback(
     async (cityName: string) => {
@@ -454,9 +496,19 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       {error && <p className="errorBanner">{error}</p>}
 
       <div className="playerZonesLayout">
-        <p className="epidemicProbability">
-          다음 2장 중 전염 카드가 등장할 확률 <strong>{epidemicProbabilityLabel}</strong>
-        </p>
+        <section>
+          <p className="epidemicProbability">
+            다음 2장 중 전염 카드가 등장할 확률 <strong>{epidemicProbabilityLabel}</strong>
+          </p>
+          <div className="playerColorTotals">
+            {CITY_COLOR_ORDER.map((color) => (
+              <div key={color} className={`playerColorTotalsItem color-${color.toLowerCase()}`}>
+                <span className="colorLabel">{CITY_COLOR_LABELS[color]}</span>
+                <span className="colorCount">{playerCityColorTotals[color]}</span>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
 
       <div className="playerZonesLayout">

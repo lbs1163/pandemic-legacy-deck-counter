@@ -63,7 +63,7 @@ const INITIAL_CITIES: CityInfo[] = [
 
 type CityColor = 'Red' | 'Blue' | 'Yellow' | 'Black';
 
-type CityInfo = {
+export type CityInfo = {
   name: string;
   color: CityColor;
   infectionCardsCount: number;
@@ -88,6 +88,7 @@ type GameState = {
   revision: number;
 
   cityInfos: CityInfo[];
+  
   infectionCityCardsStates: InfectionCityCardsState[];
   zoneBLayers: CityCardsSnapshot[][];
 
@@ -103,6 +104,8 @@ type GameStorage = GameState[];
 // UI related Data. Only GameSnapshot is sent to frontend
 export interface GameSnapshot {
   revision: number;
+
+  cityInfos: CityInfo[];
 
   zoneA: CityCardsSnapshot[];
   zoneBLayers: CityCardsSnapshot[][];
@@ -320,6 +323,7 @@ function buildSnapshot(state: GameState): GameSnapshot {
     playerCityCounts: sortCities(state.playerCityCounts),
     playerEventCounts: state.playerEventCounts,
     playerEpidemicCounts: state.playerEpidemicCounts,
+    cityInfos: cloneState(state.cityInfos),
   };
 }
 

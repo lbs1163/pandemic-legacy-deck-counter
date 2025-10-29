@@ -173,6 +173,49 @@ button {
   color: #fde68a;
 }
 
+.playerColorTotals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.playerColorTotalsItem {
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: rgba(31, 41, 55, 0.6);
+  border-left: 4px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.playerColorTotalsItem.color-blue {
+  border-left-color: #60a5fa;
+}
+
+.playerColorTotalsItem.color-yellow {
+  border-left-color: #facc15;
+}
+
+.playerColorTotalsItem.color-black {
+  border-left-color: #9ca3af;
+}
+
+.playerColorTotalsItem.color-red {
+  border-left-color: #f87171;
+}
+
+.playerColorTotalsItem .colorLabel {
+  color: #cbd5f5;
+}
+
+.playerColorTotalsItem .colorCount {
+  font-weight: 600;
+  color: #f9fafb;
+}
+
 .zoneList {
   list-style: none;
   padding: 0;

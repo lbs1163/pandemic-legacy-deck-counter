@@ -164,7 +164,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     [applyError, applySnapshot, startRequest]
   );
 
-  const handleReset = useCallback(async () => {
+  const handleFullReset = useCallback(async () => {
     if (isBusy) {
       return;
     }
@@ -177,6 +177,23 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '덱을 초기화할 수 없습니다.';
+      applyError(message, requestId);
+    } finally {
+      setIsBusy(false);
+    }
+  }, [applyError, applySnapshot, isBusy, startRequest]);
+  const handleNewGame = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+    const requestId = startRequest();
+    setIsBusy(true);
+    applyError(null, requestId);
+    try {
+      const updated = await mutateDeck('/api/deck/new-game', {});
+      applySnapshot(updated, requestId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '�� ������ �������� ���߽��ϴ�.';
       applyError(message, requestId);
     } finally {
       setIsBusy(false);
@@ -265,8 +282,14 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             {isRefreshing ? '갱신 중…' : '새로고침'}
           </button>
           <button
+            className="refreshButton"
+            onClick={() => void handleNewGame()}
+            disabled={isBusy}
+          >
+            새 게임
+          </button>          <button
             className="resetButton"
-            onClick={() => void handleReset()}
+            onClick={() => void handleFullReset()}
             disabled={isBusy}
           >
             덱 초기화

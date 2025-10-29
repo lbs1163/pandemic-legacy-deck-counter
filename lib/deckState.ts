@@ -372,11 +372,44 @@ export async function addCity(cityName: string, count: number): Promise<DeckSnap
   });
 }
 
-export async function resetDeckState(): Promise<DeckSnapshot> {
+export async function resetToInitial(): Promise<DeckSnapshot> {
   return enqueueStateWork(async () => {
     const current = await loadState();
     const state = createInitialState();
     state.revision = current.revision + 1;
+    await saveState(state);
+    return buildSnapshot(state);
+  });
+}
+
+export async function startNewGame(): Promise<DeckSnapshot> {
+  return enqueueStateWork(async () => {
+    const state = await loadState();
+
+    const totalByCity: Record<string, number> = {};
+    // Start with A and C
+    Object.values(state.cities).forEach((city) => {
+      totalByCity[city.name] = (city.safe ?? 0) + (city.discard ?? 0);
+    });
+    // Add B layers
+    state.hotLayers.forEach((layer) => {
+      Object.entries(layer.cards).forEach(([name, count]) => {
+        totalByCity[name] = (totalByCity[name] ?? 0) + (count ?? 0);
+      });
+    });
+
+    // Reset deck: all cards go back to C according to current totals
+    Object.values(state.cities).forEach((city) => {
+      const total = totalByCity[city.name] ?? 0;
+      city.discard = 0;
+      city.safe = total;
+    });
+
+    // Clear B layers and reset layer id sequence
+    state.hotLayers = [];
+    state.nextLayerId = 1;
+
+    state.revision += 1;
     await saveState(state);
     return buildSnapshot(state);
   });

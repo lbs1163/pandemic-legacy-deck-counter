@@ -646,28 +646,42 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           <div className="deckSummary">
             <span className="deckSummaryTitle">감염 카드 덱 더미</span>
             <div className="deckSummaryControls">
-              <label className="deckSummaryLabel">
+              <div className="deckSummaryLabel">
                 <span>드로우 수</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={6}
-                  value={numDraw}
-                  onChange={(event) =>
-                    setNumDraw(Math.max(1, Math.min(6, Number.parseInt(event.target.value) || 2)))
-                  }
-                />
-              </label>
-            {canTriggerEpidemic &&
-              <label className="togglePredict">
-                <input
-                  type="checkbox"
-                  checked={predictEpidemic}
-                  onChange={(event) => setPredictEpidemic(event.target.checked)}
-                />
-                <span>전염 발생 후 기준</span>
-              </label>
-            }
+                <div className="drawStepper">
+                  <button
+                    type="button"
+                    className="stepperButton"
+                    onClick={() => setNumDraw((value) => Math.max(1, value - 1))}
+                    disabled={numDraw <= 1}
+                    aria-label="드로우 수 감소"
+                  >
+                    &#9664;
+                  </button>
+                  <span className="stepperValue" aria-live="polite">
+                    {numDraw}
+                  </span>
+                  <button
+                    type="button"
+                    className="stepperButton"
+                    onClick={() => setNumDraw((value) => Math.min(6, value + 1))}
+                    disabled={numDraw >= 6}
+                    aria-label="드로우 수 증가"
+                  >
+                    &#9654;
+                  </button>
+                </div>
+              </div>
+              {canTriggerEpidemic &&
+                <label className="togglePredict">
+                  <input
+                    type="checkbox"
+                    checked={predictEpidemic}
+                    onChange={(event) => setPredictEpidemic(event.target.checked)}
+                  />
+                  <span>전염 발생 후 기준</span>
+                </label>
+              }
             </div>
             <table className="probabilityTable">
               <thead>

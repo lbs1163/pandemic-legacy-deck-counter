@@ -601,6 +601,46 @@ button {
   color: #e5e7eb;
 }
 
+.drawStepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 999px;
+  border: 1px solid #374151;
+  background: rgba(31, 41, 55, 0.65);
+  padding: 6px 12px;
+}
+
+.stepperButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: rgba(59, 130, 246, 0.15);
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.stepperButton:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.35);
+}
+
+.stepperButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stepperValue {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
 .togglePredict {
   display: inline-flex;
   align-items: center;

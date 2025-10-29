@@ -621,7 +621,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           <div className="deckSummary">
             <span className="deckSummaryTitle">감염 카드 덱 더미</span>
             <p className="probability">
-              다음 2장 중 전염 카드가 등장할 확률표
+              감염 카드 확률표 (전염 {predictEpidemic ? "후" : "전"}, {numDraw}장 드로우)
             </p>
             {/** TODO: Add table for probability */}
             {/** use `showingCityProbabilities` variable and make table */}

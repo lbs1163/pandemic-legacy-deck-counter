@@ -33,6 +33,7 @@ export interface DeckSnapshot {
   zoneA: ZoneCityCount[];
   zoneBLayers: DeckLayer[];
   zoneC: ZoneCityCount[];
+  zoneD: ZoneCityCount[];
   totals: Record<Zone | 'total', number>;
 }
 
@@ -40,6 +41,7 @@ type CityState = {
   name: string;
   discard: number;
   safe: number;
+  pending: number;
 };
 
 type HotLayer = {
@@ -123,6 +125,27 @@ function ensureStateShape(raw: unknown): DeckStorage {
   if (!state.cities || typeof state.cities !== 'object') {
     state.cities = {};
   }
+  // Ensure per-city shape
+  Object.keys(state.cities).forEach((key) => {
+    const c = state.cities[key] as Partial<CityState> & { name?: string };
+    if (!c || typeof c !== 'object') {
+      delete (state.cities as any)[key];
+      return;
+    }
+    if (typeof c.name !== 'string') {
+      (c as any).name = key;
+    }
+    if (typeof c.discard !== 'number' || !Number.isFinite(c.discard)) {
+      (c as any).discard = 0;
+    }
+    if (typeof c.safe !== 'number' || !Number.isFinite(c.safe)) {
+      (c as any).safe = 0;
+    }
+    if (typeof (c as any).pending !== 'number' || !Number.isFinite((c as any).pending)) {
+      (c as any).pending = 0;
+    }
+    (state.cities as any)[key] = c as CityState;
+  });
 
   if (!Array.isArray(state.hotLayers)) {
     state.hotLayers = [];
@@ -227,7 +250,8 @@ function ensureCityExists(state: DeckStorage, name: string, initialSafe?: number
       safe:
         typeof initialSafe === 'number' && Number.isFinite(initialSafe) && initialSafe > 0
           ? Math.floor(initialSafe)
-          : 3
+          : 3,
+      pending: 0
     };
     state.cityOrder.push(key);
   }
@@ -310,6 +334,22 @@ function buildZoneC(state: DeckStorage): ZoneCityCount[] {
   return sortCities(list);
 }
 
+function buildZoneD(state: DeckStorage): ZoneCityCount[] {
+  const list = state.cityOrder.map((key) => {
+    const city = state.cities[key];
+    if (!city) {
+      throw new Error('도시 데이터를 찾을 수 없습니다.');
+    }
+
+    return {
+      name: city.name,
+      count: city.pending ?? 0
+    };
+  });
+
+  return sortCities(list).filter((c) => c.count > 0);
+}
+
 function buildZoneBLayers(state: DeckStorage): DeckLayer[] {
   return state.hotLayers.map((layer, index) => {
     const cities = sortCities(
@@ -336,6 +376,7 @@ function buildSnapshot(state: DeckStorage): DeckSnapshot {
     zoneA: buildZoneA(state),
     zoneBLayers: buildZoneBLayers(state),
     zoneC: buildZoneC(state),
+    zoneD: buildZoneD(state),
     totals: computeTotals(state)
   };
 }
@@ -415,7 +456,15 @@ export async function addCity(cityName: string, count: number): Promise<DeckSnap
     if (typeof count !== 'number' || !Number.isFinite(count) || count <= 0) {
       throw new Error('감염 카드 장수는 1 이상이어야 합니다.');
     }
-    ensureCityExists(state, cityName, Math.floor(count));
+    const key = normaliseCityName(cityName);
+    if (!key) {
+      throw new Error('도시 이름이 필요합니다.');
+    }
+    if (state.cities[key]) {
+      throw new Error('이미 존재하는 도시입니다.');
+    }
+    const city = ensureCityExists(state, key, 0);
+    city.pending = Math.floor(count);
   });
 }
 
@@ -450,12 +499,19 @@ export async function startNewGame(): Promise<DeckSnapshot> {
         totalByCity[name] = (totalByCity[name] ?? 0) + (count ?? 0);
       });
     });
+    // Include pending cards (D-zone) to be added at new game
+    Object.values(state.cities).forEach((city) => {
+      if (city.pending && city.pending > 0) {
+        totalByCity[city.name] = (totalByCity[city.name] ?? 0) + city.pending;
+      }
+    });
 
     // Reset deck: all cards go back to C according to current totals
     Object.values(state.cities).forEach((city) => {
       const total = totalByCity[city.name] ?? 0;
       city.discard = 0;
       city.safe = total;
+      city.pending = 0;
     });
 
     // Clear B layers and reset layer id sequence

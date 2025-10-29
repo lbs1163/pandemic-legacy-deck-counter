@@ -21,6 +21,11 @@ const ZONE_INFO = {
     title: 'C · 안전한 덱',
     description: '아직 공개되지 않은 감염 카드',
     accent: '#60a5fa'
+  },
+  D: {
+    title: '게임 종료 영역',
+    description: '다음 새 게임 시작 시 덱에 합류할 카드',
+    accent: '#a78bfa'
   }
 } as const;
 
@@ -451,6 +456,34 @@ export default function DeckClient({ initialData }: DeckClientProps) {
               </li>
             ))}
           </ul>
+        </div>
+
+        <div
+          className="zoneCard"
+          style={{ borderColor: ZONE_INFO.D.accent }}
+        >
+          <header className="zoneHeader">
+            <h2>{ZONE_INFO.D.title}</h2>
+            <p>{ZONE_INFO.D.description}</p>
+          </header>
+
+          {deck.zoneD.length === 0 ? (
+            <p className="emptyMessage">표시할 카드가 없습니다.</p>
+          ) : (
+            <ul className="zoneList">
+              {deck.zoneD.map((city) => (
+                <li key={`D-${city.name}`} className="zoneListItem">
+                  <div className="zoneCityText">
+                    <span className="cityName">{city.name}</span>
+                    <span className="cityCount">
+                      {city.count}
+                      <span className="countUnit">장</span>
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 

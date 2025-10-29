@@ -639,7 +639,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                   max={6}
                   value={numDraw}
                   onChange={(event) =>
-                    setNumDraw(Math.max(1, Math.min(6, Number.parseInt(event.target.value, 10) || 1)))
+                    setNumDraw(Math.max(1, Math.min(6, Number.parseInt(event.target.value) || 2)))
                   }
                 />
               </label>
@@ -673,8 +673,14 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                     {Array.from({ length: numDraw }, (_, index) => {
                       const drawIndex = index + 1;
                       const prob = city.probs.find((entry) => entry.draw === drawIndex)?.probability ?? 0;
+                      const fillPercent = Math.max(0, Math.min(100, prob * 100));
                       return (
-                        <td key={`prob-${city.name}-${drawIndex}`}>
+                        <td
+                          key={`prob-${city.name}-${drawIndex}`}
+                          style={{
+                            background: `linear-gradient(90deg, rgba(59, 130, 246, 0.4) 0%, rgba(59, 130, 246, 0.4) ${fillPercent}%, transparent ${fillPercent}%, transparent 100%)`
+                          }}
+                        >
                           {probabilityFormatter.format(prob)}
                         </td>
                       );

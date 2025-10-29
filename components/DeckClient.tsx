@@ -442,14 +442,14 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                 <div className="zoneCityText">
                   <span className="cityName">이벤트</span>
                   <span className="cityCount">
-                    {deck.playerEventsRemaining ?? 0}
+                    {deck.playerEventCounts ?? 0}
                     <span className="countUnit">장</span>
                   </span>
                 </div>
                 <button
                   className="addButton"
                   onClick={() => void handleDrawEvent()}
-                  disabled={isBusy || (deck.playerEventsRemaining ?? 0) <= 0}
+                  disabled={isBusy || (deck.playerEventCounts ?? 0) <= 0}
                   aria-label="이벤트 카드 드로우"
                 >
                   -

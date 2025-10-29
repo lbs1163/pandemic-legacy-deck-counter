@@ -91,7 +91,7 @@ type GameState = {
 
   playerPiles: number[];
   playerCityCounts: CityCardsSnapshot[];
-  playerEventsRemaining: number;
+  playerEventCounts: number;
 };
 
 // Total data for DB storage, contains state history
@@ -108,7 +108,7 @@ export interface GameSnapshot {
   
   playerPiles: number[];
   playerCityCounts: CityCardsSnapshot[];
-  playerEventsRemaining: number;
+  playerEventCounts: number;
 }
 
 type StateMutation = (state: GameState) => GameState;
@@ -176,7 +176,7 @@ function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?
       name: cityInfo.name,
       count: cityInfo.playerCardsCount
     })),
-    playerEventsRemaining: eventCount,
+    playerEventCounts: eventCount,
   };
 
   return state;
@@ -323,7 +323,7 @@ function buildSnapshot(state: GameState): GameSnapshot {
 
     playerPiles: cloneState(state.playerPiles),
     playerCityCounts: sortCities(state.playerCityCounts),
-    playerEventsRemaining: state.playerEventsRemaining,
+    playerEventCounts: state.playerEventCounts,
   };
 }
 
@@ -462,10 +462,10 @@ export async function drawPlayerCity(cityName: string): Promise<GameSnapshot> {
 
 export async function drawPlayerEvent(): Promise<GameSnapshot> {
   return updateState((state) => {
-    if (state.playerEventsRemaining <= 0) {
+    if (state.playerEventCounts <= 0) {
       throw new Error('이벤트 카드가 남아있지 않습니다.');
     }
-    state.playerEventsRemaining -= 1;
+    state.playerEventCounts -= 1;
     drawFromTopPile(state);
 
     return state;

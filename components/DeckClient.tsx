@@ -75,6 +75,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   const [isEpidemicOpen, setIsEpidemicOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newCityName, setNewCityName] = useState('');
+  const [newCityCount, setNewCityCount] = useState<string>('');
   const latestRequestId = useRef(0);
 
   const startRequest = useCallback(() => {
@@ -208,7 +209,12 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const trimmed = newCityName.trim();
+      const parsed = Number.parseInt(newCityCount, 10);
       if (!trimmed) {
+        return;
+      }
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        setError('감염 카드 장수는 1 이상이어야 합니다.');
         return;
       }
       const requestId = startRequest();
@@ -216,10 +222,12 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       applyError(null, requestId);
       try {
         const updated = await mutateDeck('/api/deck/cities', {
-          city: trimmed
+          city: trimmed,
+          count: Math.floor(parsed)
         });
         applySnapshot(updated, requestId);
         setNewCityName('');
+        setNewCityCount('');
       } catch (err) {
         const message =
           err instanceof Error
@@ -230,7 +238,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
         setIsBusy(false);
       }
     },
-    [applyError, applySnapshot, newCityName, startRequest]
+    [applyError, applySnapshot, newCityName, newCityCount, startRequest]
   );
 
   return (
@@ -396,7 +404,25 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             disabled={isBusy}
             aria-label="새 도시 이름"
           />
-          <button type="submit" disabled={isBusy || !newCityName.trim()}>
+          <input
+            type="number"
+            value={newCityCount}
+            onChange={(event) => setNewCityCount(event.target.value)}
+            placeholder="카드 장수"
+            min={1}
+            step={1}
+            disabled={isBusy}
+            aria-label="감염 카드 장수"
+          />
+          <button
+            type="submit"
+            disabled={
+              isBusy ||
+              !newCityName.trim() ||
+              !Number.isFinite(Number.parseInt(newCityCount, 10)) ||
+              Number.parseInt(newCityCount, 10) <= 0
+            }
+          >
             추가
           </button>
         </form>

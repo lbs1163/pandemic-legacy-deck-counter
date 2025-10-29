@@ -166,7 +166,7 @@ async function updateState(mutator: StateMutation): Promise<DeckSnapshot> {
   });
 }
 
-function ensureCityExists(state: DeckStorage, name: string) {
+function ensureCityExists(state: DeckStorage, name: string, initialSafe?: number) {
   const key = normaliseCityName(name);
 
   if (!key) {
@@ -177,7 +177,10 @@ function ensureCityExists(state: DeckStorage, name: string) {
     state.cities[key] = {
       name: key,
       discard: 0,
-      safe: 3
+      safe:
+        typeof initialSafe === 'number' && Number.isFinite(initialSafe) && initialSafe > 0
+          ? Math.floor(initialSafe)
+          : 3
     };
     state.cityOrder.push(key);
   }
@@ -360,9 +363,12 @@ export async function triggerEpidemic(
   });
 }
 
-export async function addCity(cityName: string): Promise<DeckSnapshot> {
+export async function addCity(cityName: string, count: number): Promise<DeckSnapshot> {
   return updateState((state) => {
-    ensureCityExists(state, cityName);
+    if (typeof count !== 'number' || !Number.isFinite(count) || count <= 0) {
+      throw new Error('감염 카드 장수는 1 이상이어야 합니다.');
+    }
+    ensureCityExists(state, cityName, Math.floor(count));
   });
 }
 

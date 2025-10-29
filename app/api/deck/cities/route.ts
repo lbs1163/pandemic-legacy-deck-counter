@@ -7,6 +7,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const city = typeof body?.city === 'string' ? body.city.trim() : '';
+    const countRaw = (body as any)?.count;
+    const count = typeof countRaw === 'number' ? countRaw : Number.parseInt(String(countRaw), 10);
 
     if (!city) {
       return NextResponse.json(
@@ -15,7 +17,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const snapshot = await addCity(city);
+    if (!Number.isFinite(count) || count <= 0) {
+      return NextResponse.json(
+        { error: '감염 카드 장수는 1 이상이어야 합니다.' },
+        { status: 400 }
+      );
+    }
+
+    const snapshot = await addCity(city, Math.floor(count));
     return NextResponse.json(snapshot);
   } catch (error) {
     if (error instanceof Error) {

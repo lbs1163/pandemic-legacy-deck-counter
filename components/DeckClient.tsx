@@ -21,6 +21,15 @@ const CITY_COLOR_LABELS: Record<CityColor, string> = {
 
 const CITY_COLOR_ORDER: CityColor[] = ['Blue', 'Yellow', 'Black', 'Red'];
 
+const CITY_COLOR_HEX: Record<CityColor, string> = {
+  Red: '#f87171',
+  Blue: '#60a5fa',
+  Yellow: '#facc15',
+  Black: '#9ca3af'
+};
+
+const DEFAULT_CITY_COLOR = '#6b7280';
+
 const ZONE_INFO = {
   A: {
     title: '버려진 감염 카드',
@@ -260,6 +269,22 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
     return totals;
   }, [cityInfoMap, deck.playerCityCounts]);
+
+  const renderCityColorDot = useCallback(
+    (cityName: string) => {
+      const cityInfo = cityInfoMap.get(cityName);
+      const colorValue = cityInfo ? CITY_COLOR_HEX[cityInfo.color] : DEFAULT_CITY_COLOR;
+
+      return (
+        <span
+          className="cityColorDot"
+          style={{ background: colorValue }}
+          aria-hidden="true"
+        />
+      );
+    },
+    [cityInfoMap]
+  );
 
   const handleIncrement = useCallback(
     async (cityName: string) => {
@@ -522,6 +547,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
               {deck.playerCityCounts.map((city) => (
                 <li key={`PC-${city.name}`} className="zoneListItem">
                   <div className="zoneCityText">
+                    {renderCityColorDot(city.name)}
                     <span className="cityName">{city.name}</span>
                     <span className="cityCount">
                       {city.count}
@@ -540,6 +566,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
               ))}
               <li className="zoneListItem">
                 <div className="zoneCityText">
+                  <span className="cityColorDot cityColorDotEvent" aria-hidden="true" />
                   <span className="cityName">이벤트</span>
                   <span className="cityCount">
                     {deck.playerEventCounts ?? 0}
@@ -557,6 +584,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
               </li>
               <li className="zoneListItem">
                 <div className="zoneCityText">
+                  <span className="cityColorDot cityColorDotEpidemic" aria-hidden="true" />
                   <span className="cityName">전염 카드</span>
                   <span className="cityCount">
                     {deck.playerEpidemicCounts}
@@ -590,6 +618,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
               {deck.zoneA.map((city) => (
                 <li key={`A-${city.name}`} className="zoneListItem">
                   <div className="zoneCityText">
+                    {renderCityColorDot(city.name)}
                     <span className="cityName">{city.name}</span>
                     <span className="cityCount">
                       {city.count}
@@ -637,6 +666,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                             className="zoneListItem"
                           >
                             <div className="zoneCityText">
+                              {renderCityColorDot(city.name)}
                               <span className="cityName">{city.name}</span>
                               <span className="cityCount">
                                 {city.count}
@@ -666,6 +696,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
               {deck.zoneC.map((city) => (
                 <li key={`C-${city.name}`} className="zoneListItem">
                   <div className="zoneCityText">
+                    {renderCityColorDot(city.name)}
                     <span className="cityName">{city.name}</span>
                     <span className="cityCount">
                       {city.count}
@@ -693,6 +724,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                 {deck.zoneD.map((city) => (
                   <li key={`D-${city.name}`} className="zoneListItem">
                     <div className="zoneCityText">
+                      {renderCityColorDot(city.name)}
                       <span className="cityName">{city.name}</span>
                       <span className="cityCount">
                         {city.count}

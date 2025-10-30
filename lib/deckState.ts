@@ -410,8 +410,18 @@ export async function addCity(
     if (result !== undefined)
       throw new Error('이미 존재하는 도시입니다.');
 
-    // Only update city infos because updated city info will be affected when new game started (for both infection card and player card)
     state.cityInfos.push({name: cityName, color: color, playerCardsCount: count, infectionCardsCount: count});
+    state.infectionCityCardsStates.push({
+      name: cityName,
+      color: color,
+      discard: 0,
+      safe: 0,
+      pending: count,
+    });
+    state.playerCityCounts.push({
+      name: cityName,
+      count: 0,
+    });
 
     return state;
   });

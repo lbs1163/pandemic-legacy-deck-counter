@@ -508,35 +508,55 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           <p className="pageSubtitle">모든 플레이어와 덱 상태를 공유하세요.</p>
         </div>
         <div className="headerButtons">
-          <div className="newGameControls" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: 12 }}>플레이어</span>
-              <input
-                type="number"
-                min={2}
-                max={4}
-                step={1}
-                value={newGamePlayers}
-                onChange={(e) => setNewGamePlayers(Math.max(2, Math.min(4, Number.parseInt(e.target.value || '0', 10))))}
-                disabled={isBusy}
-                aria-label="플레이어 수"
-                style={{ width: 56 }}
-              />
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: 12 }}>이벤트</span>
-              <input
-                type="number"
-                min={0}
-                max={12}
-                step={1}
-                value={newGameEventCount}
-                onChange={(e) => setNewGameEventCount(Math.max(0, Math.min(12, Number.parseInt(e.target.value || '0', 10))))}
-                disabled={isBusy}
-                aria-label="이벤트 카드 수"
-                style={{ width: 56 }}
-              />
-            </label>
+          <div className="newGameControls" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div className="deckSummaryLabel">
+              <span>플레이어</span>
+              <div className="drawStepper" role="group" aria-label="플레이어 수 조절">
+                <button
+                  type="button"
+                  className="stepperButton"
+                  onClick={() => setNewGamePlayers((v) => Math.max(2, v - 1))}
+                  disabled={isBusy || newGamePlayers <= 2}
+                  aria-label="플레이어 수 감소"
+                >
+                  &#9664;
+                </button>
+                <span className="stepperValue" aria-live="polite">{newGamePlayers}</span>
+                <button
+                  type="button"
+                  className="stepperButton"
+                  onClick={() => setNewGamePlayers((v) => Math.min(4, v + 1))}
+                  disabled={isBusy || newGamePlayers >= 4}
+                  aria-label="플레이어 수 증가"
+                >
+                  &#9654;
+                </button>
+              </div>
+            </div>
+            <div className="deckSummaryLabel">
+              <span>이벤트</span>
+              <div className="drawStepper" role="group" aria-label="이벤트 카드 수 조절">
+                <button
+                  type="button"
+                  className="stepperButton"
+                  onClick={() => setNewGameEventCount((v) => Math.max(0, v - 1))}
+                  disabled={isBusy || newGameEventCount <= 0}
+                  aria-label="이벤트 수 감소"
+                >
+                  &#9664;
+                </button>
+                <span className="stepperValue" aria-live="polite">{newGameEventCount}</span>
+                <button
+                  type="button"
+                  className="stepperButton"
+                  onClick={() => setNewGameEventCount((v) => Math.min(12, v + 1))}
+                  disabled={isBusy || newGameEventCount >= 12}
+                  aria-label="이벤트 수 증가"
+                >
+                  &#9654;
+                </button>
+              </div>
+            </div>
           </div>
           <button
             className="epidemicButton"

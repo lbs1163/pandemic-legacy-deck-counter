@@ -108,6 +108,8 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   const [newCityColor, setNewCityColor] = useState<CityColor>(CITY_COLOR_ORDER[0]);
   const [predictEpidemic, setPredictEpidemic] = useState<boolean>(false);
   const [numDraw, setNumDraw] = useState<number>(2);
+  const [newGamePlayers, setNewGamePlayers] = useState<number>(4);
+  const [newGameEventCount, setNewGameEventCount] = useState<number>(4);
   const latestRequestId = useRef(0);
 
   const startRequest = useCallback(() => {
@@ -388,7 +390,10 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     setIsBusy(true);
     applyError(null, requestId);
     try {
-      const updated = await mutateDeck('/api/deck/new-game', {});
+      const updated = await mutateDeck('/api/deck/new-game', {
+        players: newGamePlayers,
+        eventCount: newGameEventCount,
+      });
       applySnapshot(updated, requestId);
     } catch (err) {
       const message = err instanceof Error ? err.message : '새 게임을 시작할 수 없습니다.';
@@ -396,7 +401,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     } finally {
       setIsBusy(false);
     }
-  }, [applyError, applySnapshot, isBusy, startRequest]);
+  }, [applyError, applySnapshot, isBusy, startRequest, newGamePlayers, newGameEventCount]);
 
   const handleEpidemic = useCallback(
     async (cityName: string) => {
@@ -503,6 +508,36 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           <p className="pageSubtitle">모든 플레이어와 덱 상태를 공유하세요.</p>
         </div>
         <div className="headerButtons">
+          <div className="newGameControls" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: 12 }}>플레이어</span>
+              <input
+                type="number"
+                min={2}
+                max={4}
+                step={1}
+                value={newGamePlayers}
+                onChange={(e) => setNewGamePlayers(Math.max(2, Math.min(4, Number.parseInt(e.target.value || '0', 10))))}
+                disabled={isBusy}
+                aria-label="플레이어 수"
+                style={{ width: 56 }}
+              />
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: 12 }}>이벤트</span>
+              <input
+                type="number"
+                min={0}
+                max={12}
+                step={1}
+                value={newGameEventCount}
+                onChange={(e) => setNewGameEventCount(Math.max(0, Math.min(12, Number.parseInt(e.target.value || '0', 10))))}
+                disabled={isBusy}
+                aria-label="이벤트 카드 수"
+                style={{ width: 56 }}
+              />
+            </label>
+          </div>
           <button
             className="epidemicButton"
             onClick={() => setIsEpidemicOpen(true)}
@@ -529,7 +564,11 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           <button
             className="refreshButton"
             onClick={() => void handleNewGame()}
-            disabled={isBusy}
+            disabled={
+              isBusy ||
+              !Number.isFinite(newGamePlayers) || newGamePlayers < 2 || newGamePlayers > 4 ||
+              !Number.isFinite(newGameEventCount) || newGameEventCount < 0
+            }
           >
             새 게임
           </button>

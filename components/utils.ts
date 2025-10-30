@@ -72,8 +72,6 @@ function sortCityProbabilities(cityProbs: CityProbability[], cityInfos: CityInfo
   cityInfos.forEach((cityInfo) => cityColorMap.set(cityInfo.name, cityInfo.color));
 
   const fallbackPriority = CITY_COLOR_ORDER.length;
-
-  console.log(cityColorMap, fallbackPriority)
   
   return [...cityProbs].sort((a, b) => {
     const colorA = cityColorMap.get(a.name);

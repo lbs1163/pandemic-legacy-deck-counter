@@ -663,7 +663,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       {error && <p className="errorBanner">{error}</p>}
 
       <div className="playerZonesLayout">
-        <section>
+        <section className="playerCardsPrediction">
           <div className="deckSummary">
             <span className="deckSummaryTitle">플레이어 카드 덱 더미</span>
             <p className="probability">
@@ -701,7 +701,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             </div>
           </div>
         </section>
-        <section>
+        <section className="infectionCardsPrediction">
           <div className="deckSummary">
             <span className="deckSummaryTitle">감염 카드 덱 더미</span>
             <div className="deckSummaryControls">
@@ -783,9 +783,6 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             </table>
           </div>
         </section>
-      </div>
-
-      <div className="playerZonesLayout">
         <section className="playerCards">
           <div className="zoneCard" style={{ borderColor: '#8b5cf6' }}>
             <header className="zoneHeader">
@@ -852,7 +849,6 @@ export default function DeckClient({ initialData }: DeckClientProps) {
             </ul>
           </div>
         </section>
-
         <section className="zones">
           <div
             className="zoneCard"

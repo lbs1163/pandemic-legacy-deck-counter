@@ -549,8 +549,8 @@ export default function DeckClient({ initialData }: DeckClientProps) {
                 <button
                   type="button"
                   className="stepperButton"
-                  onClick={() => setNewGameEventCount((v) => Math.min(12, v + 1))}
-                  disabled={isBusy || newGameEventCount >= 12}
+                  onClick={() => setNewGameEventCount((v) => Math.min(20, v + 1))}
+                  disabled={isBusy || newGameEventCount >= 20}
                   aria-label="이벤트 수 증가"
                 >
                   &#9654;

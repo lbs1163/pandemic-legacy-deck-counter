@@ -164,7 +164,7 @@ function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?
   for (let i = 0; i < INITIAL_EPIDEMIC_COUNTS; i += 1) {
     const size = base + (extra > 0 ? 1 : 0);
     if (extra > 0) extra -= 1;
-    fivePiles.push(size + 1); // +1 epidemic per pile
+    fivePiles.push(size);
   }
 
   let state: GameState = {

@@ -9,6 +9,7 @@ interface DeckHeaderProps {
   onChangePlayers: (value: number) => void;
   onChangeEventCount: (value: number) => void;
   onOpenEpidemic: () => void;
+  onOpenBgm: () => void;
   onOpenNewCity: () => void;
   onRefresh: () => void;
   onUndo: () => void;
@@ -25,6 +26,7 @@ export function DeckHeader({
   onChangePlayers,
   onChangeEventCount,
   onOpenEpidemic,
+  onOpenBgm,
   onOpenNewCity,
   onRefresh,
   onUndo,
@@ -83,6 +85,14 @@ export function DeckHeader({
           disabled={isBusy || !canTriggerEpidemic}
         >
           전염 카드 발동
+        </button>
+        <button
+          className="refreshButton"
+          onClick={onOpenBgm}
+          aria-label="배경 음악 열기"
+          disabled={isBusy}
+        >
+          BGM
         </button>
         <button
           className="refreshButton"

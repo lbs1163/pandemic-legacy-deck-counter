@@ -109,6 +109,10 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     }
   }, []);
 
+  const handleOpenBgm = useCallback(() => {
+    window.open('https://youtu.be/I-m2C5QfoZE?si=qKHxXsV8orBoxHqs', '_blank', 'noopener,noreferrer');
+  }, []);
+
   const refresh = useCallback(async () => {
     const requestId = startRequest();
     setIsRefreshing(true);
@@ -511,6 +515,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
         onChangePlayers={setNewGamePlayers}
         onChangeEventCount={setNewGameEventCount}
         onOpenEpidemic={() => setIsEpidemicOpen(true)}
+        onOpenBgm={() => handleOpenBgm()}
         onOpenNewCity={() => setIsNewCityOpen(true)}
         onRefresh={() => void refresh()}
         onUndo={() => void handleUndo()}

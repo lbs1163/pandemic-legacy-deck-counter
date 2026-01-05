@@ -338,6 +338,7 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .cityColorDot {
@@ -359,6 +360,16 @@ button {
 
 .cityName {
   font-weight: 600;
+  display: block;
+}
+
+.zoneCityText .cityName,
+.probCity .cityName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cityCount {
@@ -789,6 +800,7 @@ button {
   align-items: center;
   gap: 8px;
   justify-content: flex-start;
+  min-width: 0;
 }
 
 .probabilityTable td {

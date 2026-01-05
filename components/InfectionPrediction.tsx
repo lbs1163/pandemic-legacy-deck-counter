@@ -32,8 +32,8 @@ export function InfectionPrediction({
 }: InfectionPredictionProps) {
   const getCityColor = (name: string): CityColor | undefined => cityInfoMap.get(name)?.color;
   const [sortState, setSortState] = useState<{ key: SortKey | null; direction: SortDirection }>({
-    key: null,
-    direction: null
+    key: 'total',
+    direction: 'desc'
   });
 
   const getProbabilityForDraw = (city: CityProbability, drawIndex: number) =>
@@ -183,7 +183,7 @@ export function InfectionPrediction({
                   <th scope="row">
                     <div className="probCity">
                       <CityColorDot color={getCityColor(city.name)} />
-                      <span>{city.name}</span>
+                      <span className="cityName">{city.name}</span>
                     </div>
                   </th>
                   {Array.from({ length: numDraw }, (_, index) => {

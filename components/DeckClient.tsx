@@ -1,57 +1,25 @@
 'use client';
 
 import {
-  CITY_COLOR_ORDER,
   INITIAL_EPIDEMIC_COUNTS,
   type CityInfo,
   type GameSnapshot
 } from '@/lib/deckState';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DeckHeader } from './DeckHeader';
+import { EpidemicOverlay } from './EpidemicOverlay';
+import { InfectionPrediction } from './InfectionPrediction';
+import { InfectionZones } from './InfectionZones';
+import { NewCityForm } from './NewCityForm';
+import { PlayerCards } from './PlayerCards';
+import { PlayerDeckSummary, type PlayerPileSummary } from './PlayerDeckSummary';
+import { CITY_COLOR_ORDER } from './deckConstants';
 import { calculateEpidemicProbs, calculateProbs, CityProbability } from './utils';
 
 type DeckData = GameSnapshot;
 
 type CityColor = CityInfo['color'];
-
-const CITY_COLOR_LABELS: Record<CityColor, string> = {
-  Red: '빨강',
-  Blue: '파랑',
-  Yellow: '노랑',
-  Black: '검정'
-};
-
-const CITY_COLOR_HEX: Record<CityColor, string> = {
-  Red: '#f87171',
-  Blue: '#60a5fa',
-  Yellow: '#facc15',
-  Black: '#9ca3af'
-};
-
-const DEFAULT_CITY_COLOR = '#6b7280';
-
-const ZONE_INFO = {
-  A: {
-    title: '버려진 감염 카드',
-    description: '이미 공개된 감염 카드',
-    accent: '#f87171'
-  },
-  B: {
-    title: '다시 섞인 감염 카드',
-    description: '전염 카드 후 위쪽에 쌓인 카드 (위 레이어부터 순서대로)',
-    accent: '#fb923c'
-  },
-  C: {
-    title: '미공개 감염 카드',
-    description: '아직 공개되지 않은 감염 카드',
-    accent: '#60a5fa'
-  },
-  D: {
-    title: '게임 종료 영역',
-    description: '다음 새 게임 시작 시 덱에 합류할 카드',
-    accent: '#a78bfa'
-  }
-} as const;
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -314,7 +282,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     return totals;
   }, [cityInfoMap, deck.playerCityCounts]);
 
-  const playerPileSummaries = useMemo(() => {
+  const playerPileSummaries = useMemo<PlayerPileSummary[]>(() => {
     return deck.playerPiles.map((count, index) => {
       const isActive = index === pileIndex && count > 0;
       return {
@@ -325,22 +293,6 @@ export default function DeckClient({ initialData }: DeckClientProps) {
       };
     });
   }, [deck.playerPiles, pileIndex, isEpidemicInCurrentPile]);
-
-  const renderCityColorDot = useCallback(
-    (cityName: string) => {
-      const cityInfo = cityInfoMap.get(cityName);
-      const colorValue = cityInfo ? CITY_COLOR_HEX[cityInfo.color] : DEFAULT_CITY_COLOR;
-
-      return (
-        <span
-          className="cityColorDot"
-          style={{ background: colorValue }}
-          aria-hidden="true"
-        />
-      );
-    },
-    [cityInfoMap]
-  );
 
   const handleIncrement = useCallback(
     async (cityName: string) => {
@@ -502,522 +454,82 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
   return (
     <main className="page">
-      <header className="pageHeader">
-        <div>
-          <h1 className="pageTitle">판데믹 레거시 S2 덱 카운터</h1>
-          <p className="pageSubtitle">모든 플레이어와 덱 상태를 공유하세요.</p>
-        </div>
-        <div className="headerButtons">
-          <div className="newGameControls" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div className="deckSummaryLabel">
-              <span>플레이어</span>
-              <div className="drawStepper" role="group" aria-label="플레이어 수 조절">
-                <button
-                  type="button"
-                  className="stepperButton"
-                  onClick={() => setNewGamePlayers((v) => Math.max(2, v - 1))}
-                  disabled={isBusy || newGamePlayers <= 2}
-                  aria-label="플레이어 수 감소"
-                >
-                  &#9664;
-                </button>
-                <span className="stepperValue" aria-live="polite">{newGamePlayers}</span>
-                <button
-                  type="button"
-                  className="stepperButton"
-                  onClick={() => setNewGamePlayers((v) => Math.min(4, v + 1))}
-                  disabled={isBusy || newGamePlayers >= 4}
-                  aria-label="플레이어 수 증가"
-                >
-                  &#9654;
-                </button>
-              </div>
-            </div>
-            <div className="deckSummaryLabel">
-              <span>이벤트</span>
-              <div className="drawStepper" role="group" aria-label="이벤트 카드 수 조절">
-                <button
-                  type="button"
-                  className="stepperButton"
-                  onClick={() => setNewGameEventCount((v) => Math.max(0, v - 1))}
-                  disabled={isBusy || newGameEventCount <= 0}
-                  aria-label="이벤트 수 감소"
-                >
-                  &#9664;
-                </button>
-                <span className="stepperValue" aria-live="polite">{newGameEventCount}</span>
-                <button
-                  type="button"
-                  className="stepperButton"
-                  onClick={() => setNewGameEventCount((v) => Math.min(20, v + 1))}
-                  disabled={isBusy || newGameEventCount >= 20}
-                  aria-label="이벤트 수 증가"
-                >
-                  &#9654;
-                </button>
-              </div>
-            </div>
-          </div>
-          <button
-            className="epidemicButton"
-            onClick={() => setIsEpidemicOpen(true)}
-            disabled={isBusy || !canTriggerEpidemic}
-          >
-            전염 카드 발동
-          </button>
-          <button
-            className="refreshButton"
-            onClick={() => void refresh()}
-            disabled={isBusy || isRefreshing}
-            aria-label="최신 상태로 새로고침"
-          >
-            {isRefreshing ? '갱신 중…' : '새로고침'}
-          </button>
-          <button
-            className="refreshButton"
-            onClick={() => void handleUndo()}
-            disabled={isBusy}
-            aria-label="되돌리기 (Ctrl+Z)"
-          >
-            되돌리기
-          </button>
-          <button
-            className="refreshButton"
-            onClick={() => void handleNewGame()}
-            disabled={
-              isBusy ||
-              !Number.isFinite(newGamePlayers) || newGamePlayers < 2 || newGamePlayers > 4 ||
-              !Number.isFinite(newGameEventCount) || newGameEventCount < 0
-            }
-          >
-            새 게임
-          </button>
-          <button
-            className="resetButton"
-            onClick={() => void handleFullReset()}
-            disabled={isBusy}
-          >
-            덱 초기화
-          </button>
-        </div>
-      </header>
+      <DeckHeader
+        isBusy={isBusy}
+        isRefreshing={isRefreshing}
+        canTriggerEpidemic={canTriggerEpidemic}
+        newGamePlayers={newGamePlayers}
+        newGameEventCount={newGameEventCount}
+        onChangePlayers={setNewGamePlayers}
+        onChangeEventCount={setNewGameEventCount}
+        onOpenEpidemic={() => setIsEpidemicOpen(true)}
+        onRefresh={() => void refresh()}
+        onUndo={() => void handleUndo()}
+        onNewGame={() => void handleNewGame()}
+        onReset={() => void handleFullReset()}
+      />
 
-      <section className="newCitySection">
-        <h2>새롭게 공급망에 연결된 도시 추가</h2>
-        <form onSubmit={handleAddCity} className="newCityForm">
-          <div className="newCityColorPicker" role="group" aria-label="도시 카드 색상">
-            {CITY_COLOR_ORDER.map((color) => (
-              <button
-                key={color}
-                type="button"
-                className={`colorChip${newCityColor === color ? ' isSelected' : ''}`}
-                onClick={() => setNewCityColor(color)}
-                aria-pressed={newCityColor === color}
-                disabled={isBusy}
-                aria-label={`${CITY_COLOR_LABELS[color]} 색상`}
-                title={`${CITY_COLOR_LABELS[color]} 색상`}
-              >
-                <span
-                  className="colorChipDot"
-                  style={{ background: CITY_COLOR_HEX[color] }}
-                  aria-hidden="true"
-                />
-              </button>
-            ))}
-          </div>
-          <div className="newCityNameRow">
-            <input
-              type="text"
-              value={newCityName}
-              onChange={(event) => setNewCityName(event.target.value)}
-              placeholder="도시 이름"
-              disabled={isBusy}
-              aria-label="새 도시 이름"
-            />
-          </div>
-          <input
-            type="number"
-            value={newCityCount}
-            onChange={(event) => setNewCityCount(event.target.value)}
-            placeholder="카드 장수"
-            min={1}
-            step={1}
-            disabled={isBusy}
-            aria-label="감염 카드 장수"
-          />
-          <button
-            type="submit"
-            disabled={
-              isBusy ||
-              !newCityName.trim() ||
-              !Number.isFinite(Number.parseInt(newCityCount, 10)) ||
-              Number.parseInt(newCityCount, 10) <= 0 ||
-              !CITY_COLOR_ORDER.includes(newCityColor)
-            }
-          >
-            추가
-          </button>
-        </form>
-      </section>
+      <NewCityForm
+        cityName={newCityName}
+        cityCount={newCityCount}
+        cityColor={newCityColor}
+        isBusy={isBusy}
+        onChangeName={setNewCityName}
+        onChangeCount={setNewCityCount}
+        onSelectColor={setNewCityColor}
+        onSubmit={handleAddCity}
+      />
 
       {error && <p className="errorBanner">{error}</p>}
 
       <div className="playerZonesLayout">
-        <section className="playerCardsPrediction">
-          <div className="deckSummary">
-            <span className="deckSummaryTitle">플레이어 카드 덱 더미</span>
-            <p className="probability">
-              다음 2장 중 전염 카드가 등장할 확률 <strong>{epidemicProbabilityLabel}</strong>
-            </p>
-            <div className="playerPileGrid">
-              {playerPileSummaries.map((pile) => (
-                <div
-                  key={pile.index}
-                  className={`playerPileItem${pile.isActive ? ' isActive' : ''}${
-                    pile.hasEpidemic ? ' hasEpidemic' : ''
-                  }${
-                    pile.count === 0 ? ' isEmpty' : ''
-                  }`}
-                >
-                  <span className="pileLabel">{pile.index === 0 ? '초기 드로우' : `더미 ${pile.index}`}</span>
-                  <span className="pileCount">{pile.count}장</span>
-                </div>
-              ))}
-            </div>
-            <div className="playerColorTotals">
-              {CITY_COLOR_ORDER.map((color) => (
-                <div key={color} className={`playerColorTotalsItem color-${color.toLowerCase()}`}>
-                  <span>
-                    <span
-                      className="cityColorDot"
-                      style={{ background: CITY_COLOR_HEX[color] }}
-                      aria-hidden="true"
-                    />
-                    <span className="colorLabel">{CITY_COLOR_LABELS[color]}</span>
-                  </span>
-                  <span className="colorCount">{playerCityColorTotals[color]} 장</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-        <section className="infectionCardsPrediction">
-          <div className="deckSummary">
-            <span className="deckSummaryTitle">감염 카드 덱 더미</span>
-            <div className="deckSummaryControls">
-              <div className="deckSummaryLabel">
-                <span>드로우 수</span>
-                <div className="drawStepper">
-                  <button
-                    type="button"
-                    className="stepperButton"
-                    onClick={() => setNumDraw((value) => Math.max(1, value - 1))}
-                    disabled={numDraw <= 1}
-                    aria-label="드로우 수 감소"
-                  >
-                    &#9664;
-                  </button>
-                  <span className="stepperValue" aria-live="polite">
-                    {numDraw}
-                  </span>
-                  <button
-                    type="button"
-                    className="stepperButton"
-                    onClick={() => setNumDraw((value) => Math.min(6, value + 1))}
-                    disabled={numDraw >= 6}
-                    aria-label="드로우 수 증가"
-                  >
-                    &#9654;
-                  </button>
-                </div>
-              </div>
-              {canTriggerEpidemic &&
-                <label className="togglePredict">
-                  <input
-                    type="checkbox"
-                    checked={predictEpidemic}
-                    onChange={(event) => setPredictEpidemic(event.target.checked)}
-                  />
-                  <span>전염 발생 후 기준</span>
-                </label>
-              }
-            </div>
-            <table className="probabilityTable">
-              <thead>
-                <tr>
-                  <th scope="col">도시</th>
-                  {Array.from({ length: numDraw }, (_, index) => (
-                    <th key={`draw-${index + 1}`} scope="col">{index + 1}장째</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {showingCityProbabilities.map((city) => (
-                  <tr key={`prob-${city.name}`}>
-                    <th scope="row">
-                      <div className="probCity">
-                        {renderCityColorDot(city.name)}
-                        <span>{city.name}</span>
-                      </div>
-                    </th>
-                    {Array.from({ length: numDraw }, (_, index) => {
-                      const drawIndex = index + 1;
-                      const prob = city.probs.find((entry) => entry.draw === drawIndex)?.probability ?? 0;
-                      let fillPercent = Math.max(0, Math.min(100, prob * 100));
-                      if (prob > 0)
-                        fillPercent = Math.max(1, fillPercent);
-                      return (
-                        <td
-                          key={`prob-${city.name}-${drawIndex}`}
-                          style={{
-                            background: `linear-gradient(90deg, rgba(59, 130, 246, 0.4) 0%, rgba(59, 130, 246, 0.4) ${fillPercent}%, transparent ${fillPercent}%, transparent 100%)`
-                          }}
-                        >
-                          {probabilityFormatter.format(prob)}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        <section className="playerCards">
-          <div className="zoneCard" style={{ borderColor: '#8b5cf6' }}>
-            <header className="zoneHeader">
-              <h2>남은 플레이어 카드</h2>
-              <p>도시, 이벤트, 전염 카드를 추적합니다.</p>
-            </header>
-            <ul className="zoneList">
-              {deck.playerCityCounts.map((city) => (
-                <li key={`PC-${city.name}`} className="zoneListItem">
-                  <div className="zoneCityText">
-                    {renderCityColorDot(city.name)}
-                    <span className="cityName">{city.name}</span>
-                    <span className="cityCount">
-                      {city.count}
-                      <span className="countUnit">장</span>
-                    </span>
-                  </div>
-                  <button
-                    className="addButton"
-                    onClick={() => void handleDrawCity(city.name)}
-                    disabled={isBusy}
-                    aria-label={`${city.name} 도시 카드 드로우`}
-                  >
-                    -
-                  </button>
-                </li>
-              ))}
-              <li className="zoneListItem">
-                <div className="zoneCityText">
-                  <span className="cityColorDot cityColorDotEvent" aria-hidden="true" />
-                  <span className="cityName">이벤트</span>
-                  <span className="cityCount">
-                    {deck.playerEventCounts ?? 0}
-                    <span className="countUnit">장</span>
-                  </span>
-                </div>
-                <button
-                  className="addButton"
-                  onClick={() => void handleDrawEvent()}
-                  disabled={isBusy || (deck.playerEventCounts ?? 0) <= 0}
-                  aria-label="이벤트 카드 드로우"
-                >
-                  -
-                </button>
-              </li>
-              <li className="zoneListItem">
-                <div className="zoneCityText">
-                  <span className="cityColorDot cityColorDotEpidemic" aria-hidden="true" />
-                  <span className="cityName">전염 카드</span>
-                  <span className="cityCount">
-                    {deck.playerEpidemicCounts}
-                    <span className="countUnit">장</span>
-                  </span>
-                </div>
-                <button
-                  className="addButton"
-                  onClick={() => setIsEpidemicOpen(true)}
-                  disabled={isBusy || !canTriggerEpidemic}
-                  aria-label="전염 카드 드로우"
-                >
-                  -
-                </button>
-              </li>
-            </ul>
-          </div>
-        </section>
-        <section className="zones">
-          <div
-            className="zoneCard"
-            style={{ borderColor: ZONE_INFO.A.accent }}
-          >
-            <header className="zoneHeader">
-              <h2>{ZONE_INFO.A.title}</h2>
-              <p>{ZONE_INFO.A.description}</p>
-            </header>
+        <PlayerDeckSummary
+          epidemicProbabilityLabel={epidemicProbabilityLabel}
+          piles={playerPileSummaries}
+          cityColorTotals={playerCityColorTotals}
+        />
 
-            <ul className="zoneList">
-              {deck.zoneA.map((city) => (
-                <li key={`A-${city.name}`} className="zoneListItem">
-                  <div className="zoneCityText">
-                    {renderCityColorDot(city.name)}
-                    <span className="cityName">{city.name}</span>
-                    <span className="cityCount">
-                      {city.count}
-                      <span className="countUnit">장</span>
-                    </span>
-                  </div>
-                  <button
-                    className="addButton"
-                    onClick={() => void handleIncrement(city.name)}
-                    disabled={isBusy}
-                  >
-                    +
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <InfectionPrediction
+          numDraw={numDraw}
+          predictEpidemic={predictEpidemic}
+          canTriggerEpidemic={canTriggerEpidemic}
+          probabilities={showingCityProbabilities}
+          probabilityFormatter={probabilityFormatter}
+          cityInfoMap={cityInfoMap}
+          onChangeNumDraw={setNumDraw}
+          onTogglePredict={setPredictEpidemic}
+        />
 
-          <div
-            className="zoneCard"
-            style={{ borderColor: ZONE_INFO.B.accent }}
-          >
-            <header className="zoneHeader">
-              <h2>{ZONE_INFO.B.title}</h2>
-              <p>{ZONE_INFO.B.description}</p>
-            </header>
+        <PlayerCards
+          cities={deck.playerCityCounts}
+          eventCount={deck.playerEventCounts ?? 0}
+          epidemicCount={deck.playerEpidemicCounts}
+          isBusy={isBusy}
+          canTriggerEpidemic={canTriggerEpidemic}
+          cityInfoMap={cityInfoMap}
+          onDrawCity={(cityName) => void handleDrawCity(cityName)}
+          onDrawEvent={() => void handleDrawEvent()}
+          onOpenEpidemic={() => setIsEpidemicOpen(true)}
+        />
 
-            {deck.zoneBLayers.length === 0 ? (
-              <p className="emptyMessage">B 영역에 카드가 없습니다.</p>
-            ) : (
-              <div className="layerList">
-                {deck.zoneBLayers.map((layer, index) => {
-                  const layerLabel =
-                    index === 0 ? 'B1 · 상단' : `B${index + 1}`;
-                  return (
-                    <div key={index} className="layerBlock">
-                      <div className="layerHeader">
-                        <span>{layerLabel}</span>
-                        <span>{1}장</span>
-                      </div>
-                      <ul className="zoneList">
-                        {layer.map((city) => (
-                          <li
-                            key={`B${index + 1}-${city.name}`}
-                            className="zoneListItem"
-                          >
-                            <div className="zoneCityText">
-                              {renderCityColorDot(city.name)}
-                              <span className="cityName">{city.name}</span>
-                              <span className="cityCount">
-                                {city.count}
-                                <span className="countUnit">장</span>
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div
-            className="zoneCard"
-            style={{ borderColor: ZONE_INFO.C.accent }}
-          >
-            <header className="zoneHeader">
-              <h2>{ZONE_INFO.C.title}</h2>
-              <p>{ZONE_INFO.C.description}</p>
-            </header>
-
-            <ul className="zoneList">
-              {deck.zoneC.map((city) => (
-                <li key={`C-${city.name}`} className="zoneListItem">
-                  <div className="zoneCityText">
-                    {renderCityColorDot(city.name)}
-                    <span className="cityName">{city.name}</span>
-                    <span className="cityCount">
-                      {city.count}
-                      <span className="countUnit">장</span>
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div
-            className="zoneCard"
-            style={{ borderColor: ZONE_INFO.D.accent }}
-          >
-            <header className="zoneHeader">
-              <h2>{ZONE_INFO.D.title}</h2>
-              <p>{ZONE_INFO.D.description}</p>
-            </header>
-
-            {deck.zoneD.length === 0 ? (
-              <p className="emptyMessage">표시할 카드가 없습니다.</p>
-            ) : (
-              <ul className="zoneList">
-                {deck.zoneD.map((city) => (
-                  <li key={`D-${city.name}`} className="zoneListItem">
-                    <div className="zoneCityText">
-                      {renderCityColorDot(city.name)}
-                      <span className="cityName">{city.name}</span>
-                      <span className="cityCount">
-                        {city.count}
-                        <span className="countUnit">장</span>
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
+        <InfectionZones
+          zoneA={deck.zoneA}
+          zoneBLayers={deck.zoneBLayers}
+          zoneC={deck.zoneC}
+          zoneD={deck.zoneD}
+          isBusy={isBusy}
+          cityInfoMap={cityInfoMap}
+          onIncrement={(cityName) => void handleIncrement(cityName)}
+        />
       </div>
 
-      {isEpidemicOpen && (
-        <div className="overlay" role="dialog" aria-modal="true">
-          <div className="overlayCard">
-            <header>
-              <h2>전염 카드 발동</h2>
-              <p>덱 맨 아래에서 뽑은 도시를 선택하세요.</p>
-            </header>
-            {epidemicCandidates.length === 0 ? (
-              <p className="emptyMessage">덱에 남은 C 영역 카드가 없습니다.</p>
-            ) : (
-              <ul className="candidateList">
-                {epidemicCandidates.map((city) => (
-                  <li key={`epidemic-${city.name}`}>
-                    <button
-                      onClick={() => void handleEpidemic(city.name)}
-                      disabled={isBusy}
-                    >
-                      <span>{city.name}</span>
-                      <span>{city.count}장</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <button
-              className="closeOverlay"
-              onClick={() => setIsEpidemicOpen(false)}
-              disabled={isBusy}
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      )}
+      <EpidemicOverlay
+        isOpen={isEpidemicOpen}
+        candidates={epidemicCandidates}
+        isBusy={isBusy}
+        onSelect={(cityName) => void handleEpidemic(cityName)}
+        onClose={() => setIsEpidemicOpen(false)}
+      />
     </main>
   );
 }

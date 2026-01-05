@@ -51,43 +51,56 @@ export function InfectionZones({
     zone: CityCardsSnapshot[],
     action?: (name: string) => void,
     removeAction?: (name: string) => void
-  ) => (
-    <ul className="zoneList zoneListGrid">
-      {zone.map((city) => {
-        const cityInfo = cityInfoMap.get(city.name);
-        return (
-          <li key={city.name} className="zoneListItem">
-            <div className="zoneCityText">
-              <CityColorDot color={cityInfo?.color} />
-              <span className="cityName">{city.name}</span>
-              <span className="cityCount">
-                {city.count}
-                <span className="countUnit">장</span>
-              </span>
-            </div>
-            {(action || removeAction) && (
-              <div className="zoneActions">
-                {removeAction && (
-                  <button
-                    className="removeButton"
-                    onClick={() => removeAction(city.name)}
-                    disabled={isBusy || city.count <= 0}
-                  >
-                    -
-                  </button>
-                )}
-                {action && (
-                  <button className="addButton" onClick={() => action(city.name)} disabled={isBusy}>
-                    +
-                  </button>
-                )}
-              </div>
-            )}
-          </li>
+  ) => {
+    const items: ReactNode[] = [];
+    let prevColorKey: string | null = null;
+
+    zone.forEach((city, index) => {
+      const cityInfo = cityInfoMap.get(city.name);
+      const colorKey = cityInfo?.color ?? 'none';
+
+      if (index > 0 && colorKey !== prevColorKey) {
+        items.push(
+          <li key={`break-${city.name}-${index}`} className="zoneListBreak" aria-hidden="true" />
         );
-      })}
-    </ul>
-  );
+      }
+
+      items.push(
+        <li key={city.name} className="zoneListItem">
+          <div className="zoneCityText">
+            <CityColorDot color={cityInfo?.color} />
+            <span className="cityName">{city.name}</span>
+            <span className="cityCount">
+              {city.count}
+              <span className="countUnit">장</span>
+            </span>
+          </div>
+          {(action || removeAction) && (
+            <div className="zoneActions">
+              {removeAction && (
+                <button
+                  className="removeButton"
+                  onClick={() => removeAction(city.name)}
+                  disabled={isBusy || city.count <= 0}
+                >
+                  -
+                </button>
+              )}
+              {action && (
+                <button className="addButton" onClick={() => action(city.name)} disabled={isBusy}>
+                  +
+                </button>
+              )}
+            </div>
+          )}
+        </li>
+      );
+
+      prevColorKey = colorKey;
+    });
+
+    return <ul className="zoneList zoneListGrid">{items}</ul>;
+  };
 
   return (
     <section className="zones">

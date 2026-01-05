@@ -321,6 +321,13 @@ button {
   border-radius: 10px;
 }
 
+.zoneListBreak {
+  grid-column: 1 / -1;
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
 .zoneActions {
   display: flex;
   gap: 6px;

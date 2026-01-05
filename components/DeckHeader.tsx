@@ -9,6 +9,7 @@ interface DeckHeaderProps {
   onChangePlayers: (value: number) => void;
   onChangeEventCount: (value: number) => void;
   onOpenEpidemic: () => void;
+  onOpenNewCity: () => void;
   onRefresh: () => void;
   onUndo: () => void;
   onNewGame: () => void;
@@ -24,6 +25,7 @@ export function DeckHeader({
   onChangePlayers,
   onChangeEventCount,
   onOpenEpidemic,
+  onOpenNewCity,
   onRefresh,
   onUndo,
   onNewGame,
@@ -81,6 +83,13 @@ export function DeckHeader({
           disabled={isBusy || !canTriggerEpidemic}
         >
           전염 카드 발동
+        </button>
+        <button
+          className="refreshButton"
+          onClick={onOpenNewCity}
+          disabled={isBusy}
+        >
+          공급망 도시 추가
         </button>
         <button
           className="refreshButton"

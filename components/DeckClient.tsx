@@ -11,7 +11,7 @@ import { DeckHeader } from './DeckHeader';
 import { EpidemicOverlay } from './EpidemicOverlay';
 import { InfectionPrediction } from './InfectionPrediction';
 import { InfectionZones } from './InfectionZones';
-import { NewCityForm } from './NewCityForm';
+import { NewCityOverlay } from './NewCityOverlay';
 import { PlayerCards } from './PlayerCards';
 import { PlayerDeckSummary, type PlayerPileSummary } from './PlayerDeckSummary';
 import { CITY_COLOR_ORDER } from './deckConstants';
@@ -70,6 +70,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isEpidemicOpen, setIsEpidemicOpen] = useState(false);
+  const [isNewCityOpen, setIsNewCityOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newCityName, setNewCityName] = useState('');
   const [newCityCount, setNewCityCount] = useState<string>('');
@@ -477,6 +478,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
         setNewCityName('');
         setNewCityCount('');
         setNewCityColor(CITY_COLOR_ORDER[0]);
+        setIsNewCityOpen(false);
       } catch (err) {
         const message =
           err instanceof Error
@@ -487,7 +489,15 @@ export default function DeckClient({ initialData }: DeckClientProps) {
         setIsBusy(false);
       }
     },
-    [applyError, applySnapshot, newCityColor, newCityName, newCityCount, startRequest]
+    [
+      applyError,
+      applySnapshot,
+      newCityColor,
+      newCityName,
+      newCityCount,
+      startRequest,
+      setIsNewCityOpen
+    ]
   );
 
   return (
@@ -501,21 +511,11 @@ export default function DeckClient({ initialData }: DeckClientProps) {
         onChangePlayers={setNewGamePlayers}
         onChangeEventCount={setNewGameEventCount}
         onOpenEpidemic={() => setIsEpidemicOpen(true)}
+        onOpenNewCity={() => setIsNewCityOpen(true)}
         onRefresh={() => void refresh()}
         onUndo={() => void handleUndo()}
         onNewGame={() => void handleNewGame()}
         onReset={() => void handleFullReset()}
-      />
-
-      <NewCityForm
-        cityName={newCityName}
-        cityCount={newCityCount}
-        cityColor={newCityColor}
-        isBusy={isBusy}
-        onChangeName={setNewCityName}
-        onChangeCount={setNewCityCount}
-        onSelectColor={setNewCityColor}
-        onSubmit={handleAddCity}
       />
 
       {error && <p className="errorBanner">{error}</p>}
@@ -570,6 +570,18 @@ export default function DeckClient({ initialData }: DeckClientProps) {
         isBusy={isBusy}
         onSelect={(cityName) => void handleEpidemic(cityName)}
         onClose={() => setIsEpidemicOpen(false)}
+      />
+      <NewCityOverlay
+        isOpen={isNewCityOpen}
+        cityName={newCityName}
+        cityCount={newCityCount}
+        cityColor={newCityColor}
+        isBusy={isBusy}
+        onChangeName={setNewCityName}
+        onChangeCount={setNewCityCount}
+        onSelectColor={setNewCityColor}
+        onSubmit={handleAddCity}
+        onClose={() => setIsNewCityOpen(false)}
       />
     </main>
   );

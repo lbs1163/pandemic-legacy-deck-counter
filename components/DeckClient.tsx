@@ -315,6 +315,44 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     [applyError, applySnapshot, startRequest]
   );
 
+  const handleRemoveDiscard = useCallback(
+    async (cityName: string) => {
+      const requestId = startRequest();
+      setIsBusy(true);
+      applyError(null, requestId);
+      try {
+        const updated = await mutateDeck('/api/deck/discard/remove', { city: cityName });
+        applySnapshot(updated, requestId);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : '제거된 감염 카드를 처리할 수 없습니다.';
+        applyError(message, requestId);
+      } finally {
+        setIsBusy(false);
+      }
+    },
+    [applyError, applySnapshot, startRequest]
+  );
+
+  const handleReturnRemoved = useCallback(
+    async (cityName: string, zone: 'A' | 'B' | 'C') => {
+      const requestId = startRequest();
+      setIsBusy(true);
+      applyError(null, requestId);
+      try {
+        const updated = await mutateDeck('/api/deck/removed/return', { city: cityName, zone });
+        applySnapshot(updated, requestId);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : '제거된 감염 카드를 복구할 수 없습니다.';
+        applyError(message, requestId);
+      } finally {
+        setIsBusy(false);
+      }
+    },
+    [applyError, applySnapshot, startRequest]
+  );
+
   const handleFullReset = useCallback(async () => {
     if (isBusy) {
       return;
@@ -517,9 +555,12 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           zoneBLayers={deck.zoneBLayers}
           zoneC={deck.zoneC}
           zoneD={deck.zoneD}
+          removed={deck.removed}
           isBusy={isBusy}
           cityInfoMap={cityInfoMap}
           onIncrement={(cityName) => void handleIncrement(cityName)}
+          onRemoveDiscard={(cityName) => void handleRemoveDiscard(cityName)}
+          onReturnRemoved={(cityName, zone) => void handleReturnRemoved(cityName, zone)}
         />
       </div>
 

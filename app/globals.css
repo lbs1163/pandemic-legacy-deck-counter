@@ -316,6 +316,12 @@ button {
   border-radius: 10px;
 }
 
+.zoneActions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .zoneCityText {
   display: flex;
   align-items: center;
@@ -365,6 +371,40 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.removeButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: white;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.removeButton:disabled,
+.returnButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.returnButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.returnButton {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(31, 41, 55, 0.8);
+  color: #e5e7eb;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-weight: 600;
 }
 
 .newCitySection {

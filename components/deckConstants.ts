@@ -41,5 +41,10 @@ export const ZONE_INFO = {
     title: '게임 종료 영역',
     description: '다음 새 게임 시작 시 덱에 합류할 카드',
     accent: '#a78bfa'
+  },
+  E: {
+    title: '제거된 감염 카드',
+    description: '게임에서 제외된 카드 (필요 시 A/B/C로 복구)',
+    accent: '#22c55e'
   }
 } as const;

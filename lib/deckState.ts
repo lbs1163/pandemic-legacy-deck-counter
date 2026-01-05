@@ -83,6 +83,7 @@ type InfectionCityCardsState = {
   discard: number;
   safe: number;
   pending: number;
+  removed: number;
 };
 
 // State of the game at specific moment.
@@ -113,6 +114,7 @@ export interface GameSnapshot {
   zoneBLayers: CityCardsSnapshot[][];
   zoneC: CityCardsSnapshot[];
   zoneD: CityCardsSnapshot[];
+  removed: CityCardsSnapshot[];
   
   playerPiles: number[];
   playerCityCounts: CityCardsSnapshot[];
@@ -149,7 +151,12 @@ function normaliseCityName(name: string) {
   return name.trim();
 }
 
-function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?: number): GameState {
+function createInitialState(
+  cityInfos: CityInfo[],
+  players?: number,
+  eventCount?: number,
+  removedCounts?: Record<string, number>
+): GameState {
   players = players ?? 4;
   eventCount = eventCount ?? 4;
 
@@ -174,8 +181,9 @@ function createInitialState(cityInfos: CityInfo[], players?: number, eventCount?
       name: cityInfo.name,
       color: cityInfo.color,
       discard: 0,
-      safe: cityInfo.infectionCardsCount,
+      safe: cityInfo.infectionCardsCount - Math.max(0, Math.min(cityInfo.infectionCardsCount, removedCounts?.[cityInfo.name] ?? 0)),
       pending: 0,
+      removed: Math.max(0, Math.min(cityInfo.infectionCardsCount, removedCounts?.[cityInfo.name] ?? 0)),
     })),
     zoneBLayers: [],
     
@@ -195,18 +203,18 @@ async function loadStorage(): Promise<GameStorage> {
   if (hasKv) {
     const stored = await kv.get<GameStorage>(KV_DECK_KEY);
     if (stored) {
-      return cloneState(stored);
+      return cloneState(stored).map((state) => migrateState(state));
     }
     const initial = [createInitialState(INITIAL_CITIES)];
     await kv.set(KV_DECK_KEY, initial);
-    return cloneState(initial);
+    return cloneState(initial).map((state) => migrateState(state));
   }
 
   if (!memoryStorage) {
     memoryStorage = [createInitialState(INITIAL_CITIES)];
   }
 
-  return cloneState(memoryStorage);
+  return cloneState(memoryStorage).map((state) => migrateState(state));
 }
 
 async function saveStorage(storage: GameStorage) {
@@ -220,6 +228,19 @@ async function saveStorage(storage: GameStorage) {
 
 function getCurrentState(storage: GameStorage): GameState {
   return storage[storage.length - 1];
+}
+
+function migrateInfectionCityState(entry: InfectionCityCardsState): InfectionCityCardsState {
+  const migrated = entry as InfectionCityCardsState & { removed?: number };
+  if (typeof migrated.removed !== 'number' || Number.isNaN(migrated.removed)) {
+    migrated.removed = 0;
+  }
+  return migrated as InfectionCityCardsState;
+}
+
+function migrateState(state: GameState): GameState {
+  state.infectionCityCardsStates = state.infectionCityCardsStates.map((entry) => migrateInfectionCityState(entry));
+  return state;
 }
 
 async function updateState(mutator: StateMutation): Promise<GameSnapshot> {
@@ -330,6 +351,19 @@ function buildZoneD(state: GameState): CityCardsSnapshot[] {
   return sortCities(state, list).filter((c) => c.count > 0);
 }
 
+function buildRemoved(state: GameState): CityCardsSnapshot[] {
+  const list = state.cityInfos.map((cityInfo) => {
+    const infectionCityCardsState = getInfectionCityCardsState(state, cityInfo.name);
+
+    return {
+      name: infectionCityCardsState.name,
+      count: infectionCityCardsState.removed,
+    };
+  });
+
+  return sortCities(state, list).filter((c) => c.count > 0);
+}
+
 function buildZoneBLayers(state: GameState): CityCardsSnapshot[][] {
   return cloneState(state.zoneBLayers).map((cityState) => sortCities(state, cityState));
 }
@@ -341,6 +375,7 @@ function buildSnapshot(state: GameState): GameSnapshot {
     zoneBLayers: buildZoneBLayers(state),
     zoneC: buildZoneC(state),
     zoneD: buildZoneD(state),
+    removed: buildRemoved(state),
 
     playerPiles: cloneState(state.playerPiles),
     playerCityCounts: sortCities(state, state.playerCityCounts),
@@ -391,6 +426,21 @@ export async function discardInfectionCard(cityName: string): Promise<GameSnapsh
   });
 }
 
+export async function removeDiscardedInfectionCard(cityName: string): Promise<GameSnapshot> {
+  return updateState((state) => {
+    const cityState = getInfectionCityCardsState(state, cityName);
+
+    if (cityState.discard <= 0) {
+      throw new Error(`버려진 감염 카드 더미에 ${cityState.name} 카드가 없습니다.`);
+    }
+
+    cityState.discard -= 1;
+    cityState.removed += 1;
+
+    return state;
+  });
+}
+
 export async function addCity(
   cityName: string,
   count: number,
@@ -417,6 +467,7 @@ export async function addCity(
       discard: 0,
       safe: 0,
       pending: count,
+      removed: 0,
     });
     state.playerCityCounts.push({
       name: cityName,
@@ -435,7 +486,11 @@ export async function resetToInitial(): Promise<GameSnapshot> {
 
 export async function startNewGame(params?: { players?: number; eventCount?: number }): Promise<GameSnapshot> {
   return updateState((state) => {
-    return createInitialState(state.cityInfos, params?.players, params?.eventCount);
+    const removedCounts = state.infectionCityCardsStates.reduce<Record<string, number>>((acc, entry) => {
+      acc[entry.name] = entry.removed;
+      return acc;
+    }, {});
+    return createInitialState(state.cityInfos, params?.players, params?.eventCount, removedCounts);
   });
 }
 
@@ -523,6 +578,46 @@ export async function drawPlayerEpidemic(bottomInfectionCityCard: string): Promi
 
     state.zoneBLayers = [newLayerCards, ...state.zoneBLayers];
     state.playerEpidemicCounts -= 1;
+
+    return state;
+  });
+}
+
+function addCardToZoneBTop(state: GameState, cityName: string) {
+  if (state.zoneBLayers.length === 0) {
+    state.zoneBLayers.push([]);
+  }
+
+  const topLayer = state.zoneBLayers[0];
+  const existing = topLayer.find((entry) => entry.name === cityName);
+  if (existing) {
+    existing.count += 1;
+  } else {
+    topLayer.push({ name: cityName, count: 1 });
+  }
+}
+
+export async function returnRemovedInfectionCard(
+  cityName: string,
+  targetZone: 'A' | 'B' | 'C'
+): Promise<GameSnapshot> {
+  return updateState((state) => {
+    const cityState = getInfectionCityCardsState(state, cityName);
+    if (cityState.removed <= 0) {
+      throw new Error(`제거된 감염 카드 중에 ${cityState.name} 카드가 없습니다.`);
+    }
+
+    cityState.removed -= 1;
+
+    if (targetZone === 'A') {
+      cityState.discard += 1;
+    } else if (targetZone === 'B') {
+      addCardToZoneBTop(state, cityName);
+    } else if (targetZone === 'C') {
+      cityState.safe += 1;
+    } else {
+      throw new Error('유효하지 않은 영역입니다.');
+    }
 
     return state;
   });

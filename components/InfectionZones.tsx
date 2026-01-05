@@ -27,9 +27,12 @@ interface InfectionZonesProps {
   zoneBLayers: CityCardsSnapshot[][];
   zoneC: CityCardsSnapshot[];
   zoneD: CityCardsSnapshot[];
+  removed: CityCardsSnapshot[];
   isBusy: boolean;
   cityInfoMap: Map<string, CityInfo>;
   onIncrement: (cityName: string) => void;
+  onRemoveDiscard: (cityName: string) => void;
+  onReturnRemoved: (cityName: string, zone: 'A' | 'B' | 'C') => void;
 }
 
 export function InfectionZones({
@@ -37,11 +40,18 @@ export function InfectionZones({
   zoneBLayers,
   zoneC,
   zoneD,
+  removed,
   isBusy,
   cityInfoMap,
-  onIncrement
+  onIncrement,
+  onRemoveDiscard,
+  onReturnRemoved,
 }: InfectionZonesProps) {
-  const renderZoneList = (zone: CityCardsSnapshot[], action?: (name: string) => void) => (
+  const renderZoneList = (
+    zone: CityCardsSnapshot[],
+    action?: (name: string) => void,
+    removeAction?: (name: string) => void
+  ) => (
     <ul className="zoneList">
       {zone.map((city) => {
         const cityInfo = cityInfoMap.get(city.name);
@@ -55,10 +65,23 @@ export function InfectionZones({
                 <span className="countUnit">장</span>
               </span>
             </div>
-            {action && (
-              <button className="addButton" onClick={() => action(city.name)} disabled={isBusy}>
-                +
-              </button>
+            {(action || removeAction) && (
+              <div className="zoneActions">
+                {removeAction && (
+                  <button
+                    className="removeButton"
+                    onClick={() => removeAction(city.name)}
+                    disabled={isBusy || city.count <= 0}
+                  >
+                    -
+                  </button>
+                )}
+                {action && (
+                  <button className="addButton" onClick={() => action(city.name)} disabled={isBusy}>
+                    +
+                  </button>
+                )}
+              </div>
             )}
           </li>
         );
@@ -69,7 +92,7 @@ export function InfectionZones({
   return (
     <section className="zones">
       <ZoneCard {...ZONE_INFO.A}>
-        {renderZoneList(zoneA, onIncrement)}
+        {renderZoneList(zoneA, onIncrement, onRemoveDiscard)}
       </ZoneCard>
 
       <ZoneCard {...ZONE_INFO.B}>
@@ -100,6 +123,42 @@ export function InfectionZones({
           <p className="emptyMessage">표시할 카드가 없습니다.</p>
         ) : (
           renderZoneList(zoneD)
+        )}
+      </ZoneCard>
+
+      <ZoneCard {...ZONE_INFO.E}>
+        {removed.length === 0 ? (
+          <p className="emptyMessage">제거된 감염 카드가 없습니다.</p>
+        ) : (
+          <ul className="zoneList">
+            {removed.map((city) => {
+              const cityInfo = cityInfoMap.get(city.name);
+              return (
+                <li key={city.name} className="zoneListItem">
+                  <div className="zoneCityText">
+                    <CityColorDot color={cityInfo?.color} />
+                    <span className="cityName">{city.name}</span>
+                    <span className="cityCount">
+                      {city.count}
+                      <span className="countUnit">장</span>
+                    </span>
+                  </div>
+                  <div className="returnButtons">
+                    {(['A', 'B', 'C'] as const).map((zoneKey) => (
+                      <button
+                        key={zoneKey}
+                        className="returnButton"
+                        disabled={isBusy}
+                        onClick={() => onReturnRemoved(city.name, zoneKey)}
+                      >
+                        {zoneKey}로
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </ZoneCard>
     </section>

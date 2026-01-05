@@ -4,7 +4,7 @@ const KV_DECK_KEY = 'pandemic:deck-state:v1';
 
 export const CITY_COLOR_ORDER: CityColor[] = ['Blue', 'Yellow', 'Black', 'Red'];
 
-export const INITIAL_EPIDEMIC_COUNTS = 7;
+export const INITIAL_EPIDEMIC_COUNTS = 8;
 
 const INITIAL_CITIES: CityInfo[] = [
   {

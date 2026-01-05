@@ -683,9 +683,36 @@ button {
 }
 
 .probabilityTable th {
+  padding: 0;
   background: rgba(59, 130, 246, 0.15);
   color: #dbeafe;
   font-weight: 600;
+}
+
+.probabilityTable tbody th {
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.probabilityTable .sortableHeader {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.probabilityTable .sortableHeader:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.probabilityTable .sortableHeader:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
 }
 
 .probabilityTable tbody tr:nth-child(odd) {

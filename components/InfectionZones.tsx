@@ -52,7 +52,7 @@ export function InfectionZones({
     action?: (name: string) => void,
     removeAction?: (name: string) => void
   ) => (
-    <ul className="zoneList">
+    <ul className="zoneList zoneListGrid">
       {zone.map((city) => {
         const cityInfo = cityInfoMap.get(city.name);
         return (
@@ -130,7 +130,7 @@ export function InfectionZones({
         {removed.length === 0 ? (
           <p className="emptyMessage">제거된 감염 카드가 없습니다.</p>
         ) : (
-          <ul className="zoneList">
+          <ul className="zoneList zoneListGrid">
             {removed.map((city) => {
               const cityInfo = cityInfoMap.get(city.name);
               return (

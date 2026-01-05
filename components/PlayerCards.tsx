@@ -31,7 +31,7 @@ export function PlayerCards({
           <h2>남은 플레이어 카드</h2>
           <p>도시, 이벤트, 전염 카드를 추적합니다.</p>
         </header>
-        <ul className="zoneList">
+        <ul className="zoneList zoneListGrid">
           {cities.map((city) => {
             const cityInfo = cityInfoMap.get(city.name);
             return (

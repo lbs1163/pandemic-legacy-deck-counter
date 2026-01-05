@@ -283,6 +283,11 @@ button {
   gap: 8px;
 }
 
+.zoneList.zoneListGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
 .layerList {
   display: flex;
   flex-direction: column;
@@ -610,7 +615,7 @@ button {
 
   .playerZonesLayout {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: 20fr 30fr 30fr 20fr;
     gap: 24px;
     align-items: start;
   }
@@ -621,18 +626,28 @@ button {
 
   .playerCardsPrediction {
     order: 0;
+    grid-column: 1 / 2;
   }
 
   .playerCards {
     order: 1;
+    grid-column: 2 / 3;
   }
 
   .zones {
     order: 2;
+    grid-column: 3 / 4;
   }
 
   .infectionCardsPrediction {
     order: 3;
+    grid-column: 4 / 5;
+  }
+}
+
+@media (min-width: 768px) {
+  .zoneList.zoneListGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

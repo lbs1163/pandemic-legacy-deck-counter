@@ -90,15 +90,15 @@ export function InfectionPrediction({
   const handleSort = (key: SortKey) => {
     setSortState((current) => {
       if (current.key !== key) {
-        return { key, direction: 'asc' };
-      }
-      if (current.direction === 'asc') {
         return { key, direction: 'desc' };
       }
       if (current.direction === 'desc') {
+        return { key, direction: 'asc' };
+      }
+      if (current.direction === 'asc') {
         return { key: null, direction: null };
       }
-      return { key, direction: 'asc' };
+      return { key, direction: 'desc' };
     });
   };
 
@@ -154,9 +154,9 @@ export function InfectionPrediction({
                     type="button"
                     className="sortableHeader"
                     onClick={() => handleSort(index + 1)}
-                    aria-label={`${index + 1}장째 확률 정렬`}
+                    aria-label={`${index + 1}장만 나올 확률 정렬`}
                   >
-                    {index + 1}장째 {renderSortIndicator(index + 1)}
+                    {index + 1}장만 {renderSortIndicator(index + 1)}
                   </button>
                 </th>
               ))}
@@ -167,7 +167,7 @@ export function InfectionPrediction({
                   onClick={() => handleSort('total')}
                   aria-label="확률 총합 정렬"
                 >
-                  총합 {renderSortIndicator('total')}
+                  1장 이상 {renderSortIndicator('total')}
                 </button>
               </th>
             </tr>

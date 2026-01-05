@@ -4,8 +4,6 @@ const KV_DECK_KEY = 'pandemic:deck-state:v1';
 
 export const CITY_COLOR_ORDER: CityColor[] = ['Blue', 'Yellow', 'Black', 'Red'];
 
-export const INITIAL_EPIDEMIC_COUNTS = 8;
-
 const INITIAL_CITIES: CityInfo[] = [
   {
     name: '뉴욕',
@@ -99,6 +97,7 @@ type GameState = {
   playerCityCounts: CityCardsSnapshot[];
   playerEventCounts: number;
   playerEpidemicCounts: number;
+  initialEpidemicCounts: number;
 };
 
 // Total data for DB storage, contains state history
@@ -120,9 +119,26 @@ export interface GameSnapshot {
   playerCityCounts: CityCardsSnapshot[];
   playerEventCounts: number;
   playerEpidemicCounts: number;
+  initialEpidemicCounts: number;
 }
 
 type StateMutation = (state: GameState) => GameState;
+
+const EPIDEMIC_CARD_RULES: { maxCityCards: number; epidemicCards: number }[] = [
+  { maxCityCards: 36, epidemicCards: 5 },
+  { maxCityCards: 44, epidemicCards: 6 },
+  { maxCityCards: 51, epidemicCards: 7 },
+  { maxCityCards: 57, epidemicCards: 8 },
+  { maxCityCards: 62, epidemicCards: 9 },
+  { maxCityCards: Number.POSITIVE_INFINITY, epidemicCards: 10 },
+];
+
+// Decide epidemic cards only from the number of city cards (exclude events/epidemics).
+export function calculateInitialEpidemicCounts(cityInfos: CityInfo[]): number {
+  const totalCityCards = cityInfos.reduce((acc, cityInfo) => acc + cityInfo.playerCardsCount, 0);
+  const matchedRule = EPIDEMIC_CARD_RULES.find((rule) => totalCityCards <= rule.maxCityCards);
+  return matchedRule?.epidemicCards ?? 10;
+}
 
 const hasKv =
   typeof process.env.KV_REST_API_URL === 'string' ||
@@ -161,17 +177,18 @@ function createInitialState(
   eventCount = eventCount ?? 4;
 
   const initialDraws = players == 3 ? 9 : 8;
+  const initialEpidemicCounts = calculateInitialEpidemicCounts(cityInfos);
   const cityCards = cityInfos.reduce((acc, cityInfo) => acc + cityInfo.playerCardsCount, 0);
-  const remaining = cityCards + eventCount + INITIAL_EPIDEMIC_COUNTS - initialDraws;
+  const remaining = cityCards + eventCount + initialEpidemicCounts - initialDraws;
   
-  // Split remaining into 5 piles as evenly as possible, larger piles on top
-  const base = Math.floor(remaining / INITIAL_EPIDEMIC_COUNTS);
-  let extra = remaining % INITIAL_EPIDEMIC_COUNTS;
-  const fivePiles: number[] = [];
-  for (let i = 0; i < INITIAL_EPIDEMIC_COUNTS; i += 1) {
+  // Split remaining into epidemicCount piles as evenly as possible, larger piles on top
+  const base = Math.floor(remaining / initialEpidemicCounts);
+  let extra = remaining % initialEpidemicCounts;
+  const epidemicPiles: number[] = [];
+  for (let i = 0; i < initialEpidemicCounts; i += 1) {
     const size = base + (extra > 0 ? 1 : 0);
     if (extra > 0) extra -= 1;
-    fivePiles.push(size);
+    epidemicPiles.push(size);
   }
 
   let state: GameState = {
@@ -187,13 +204,14 @@ function createInitialState(
     })),
     zoneBLayers: [],
     
-    playerPiles: [initialDraws, ...fivePiles],
+    playerPiles: [initialDraws, ...epidemicPiles],
     playerCityCounts: cityInfos.map((cityInfo) => ({
       name: cityInfo.name,
       count: cityInfo.playerCardsCount
     })),
     playerEventCounts: eventCount,
-    playerEpidemicCounts: INITIAL_EPIDEMIC_COUNTS,
+    playerEpidemicCounts: initialEpidemicCounts,
+    initialEpidemicCounts,
   };
 
   return state;
@@ -240,6 +258,9 @@ function migrateInfectionCityState(entry: InfectionCityCardsState): InfectionCit
 
 function migrateState(state: GameState): GameState {
   state.infectionCityCardsStates = state.infectionCityCardsStates.map((entry) => migrateInfectionCityState(entry));
+  if (typeof state.initialEpidemicCounts !== 'number' || Number.isNaN(state.initialEpidemicCounts)) {
+    state.initialEpidemicCounts = Math.max(1, state.playerPiles.length - 1);
+  }
   return state;
 }
 
@@ -381,6 +402,7 @@ function buildSnapshot(state: GameState): GameSnapshot {
     playerCityCounts: sortCities(state, state.playerCityCounts),
     playerEventCounts: state.playerEventCounts,
     playerEpidemicCounts: state.playerEpidemicCounts,
+    initialEpidemicCounts: state.initialEpidemicCounts,
     cityInfos: cloneState(state.cityInfos),
   };
 }
@@ -500,7 +522,7 @@ function drawFromTopPile(state: GameState, isEpidemic?: boolean) {
     throw new Error('플레이어 덱에 남은 카드가 없습니다.');
   }
 
-  const drawedEpidemicCards = INITIAL_EPIDEMIC_COUNTS - state.playerEpidemicCounts;
+  const drawedEpidemicCards = state.initialEpidemicCounts - state.playerEpidemicCounts;
 
   // Cannot draw epidemic cards for initial draws
   if (idx == 0 && isEpidemic == true)

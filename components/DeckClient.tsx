@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  INITIAL_EPIDEMIC_COUNTS,
   type CityInfo,
   type GameSnapshot
 } from '@/lib/deckState';
@@ -181,7 +180,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   );
 
   const pileIndex = deck.playerPiles.findIndex((c) => c > 0);
-  const drawedEpidemicCards = INITIAL_EPIDEMIC_COUNTS - deck.playerEpidemicCounts;
+  const drawedEpidemicCards = deck.initialEpidemicCounts - deck.playerEpidemicCounts;
   const isEpidemicInCurrentPile =
     pileIndex > 0 &&
     drawedEpidemicCards < pileIndex &&
@@ -200,7 +199,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     const pileIndex = deck.playerPiles.findIndex((c) => c > 0);
     if (pileIndex == -1)
       return 0;
-    const drawedEpidemicCards = INITIAL_EPIDEMIC_COUNTS - deck.playerEpidemicCounts;
+    const drawedEpidemicCards = deck.initialEpidemicCounts - deck.playerEpidemicCounts;
     const isFirstPileEpidemicLeft = drawedEpidemicCards < pileIndex;
 
     const spansTwoPiles = deck.playerPiles[pileIndex] == 1;

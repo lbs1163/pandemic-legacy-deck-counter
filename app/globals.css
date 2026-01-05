@@ -363,19 +363,21 @@ button {
 }
 
 .addButton {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #2563eb;
   color: white;
   display: flex;
   justify-content: center;
   align-items: center;
+  font-size: 0.9rem;
+  padding: 0;
 }
 
 .removeButton {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #ef4444;
   color: white;
@@ -383,6 +385,7 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
+  font-size: 0.9rem;
 }
 
 .removeButton:disabled,

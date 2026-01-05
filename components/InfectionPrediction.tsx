@@ -56,6 +56,9 @@ export function InfectionPrediction({
     }
 
     const compare = (a: (typeof rows)[number], b: (typeof rows)[number]) => {
+      if (sortState.key == null)
+        return 0;
+      
       let aValue: string | number;
       let bValue: string | number;
 

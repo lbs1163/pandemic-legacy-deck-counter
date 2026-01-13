@@ -485,6 +485,42 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     [applyError, applySnapshot, startRequest]
   );
 
+  const handleRemovePlayerCity = useCallback(
+    async (cityName: string) => {
+      const requestId = startRequest();
+      setIsBusy(true);
+      applyError(null, requestId);
+      try {
+        const updated = await mutateDeck('/api/deck/player/remove', { city: cityName });
+        applySnapshot(updated, requestId);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '도시 카드 제거 실패';
+        applyError(message, requestId);
+      } finally {
+        setIsBusy(false);
+      }
+    },
+    [applyError, applySnapshot, startRequest]
+  );
+
+  const handleReturnRemovedPlayerCity = useCallback(
+    async (cityName: string) => {
+      const requestId = startRequest();
+      setIsBusy(true);
+      applyError(null, requestId);
+      try {
+        const updated = await mutateDeck('/api/deck/player/return', { city: cityName });
+        applySnapshot(updated, requestId);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '도시 카드 복구 실패';
+        applyError(message, requestId);
+      } finally {
+        setIsBusy(false);
+      }
+    },
+    [applyError, applySnapshot, startRequest]
+  );
+
   const handleAddCity = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -578,12 +614,18 @@ export default function DeckClient({ initialData }: DeckClientProps) {
 
         <PlayerCards
           cities={deck.playerCityCounts}
+          removedCities={deck.playerRemovedCityCounts}
+          drawnCities={deck.playerDrawnCityCounts}
           eventCount={deck.playerEventCounts ?? 0}
           epidemicCount={deck.playerEpidemicCounts}
+          drawnEventCount={deck.playerDrawnEventCounts}
+          drawnEpidemicCount={deck.playerDrawnEpidemicCounts}
           isBusy={isBusy}
           canTriggerEpidemic={canTriggerEpidemic}
           cityInfoMap={cityInfoMap}
           onDrawCity={(cityName) => void handleDrawCity(cityName)}
+          onRemoveCity={(cityName) => void handleRemovePlayerCity(cityName)}
+          onReturnRemovedCity={(cityName) => void handleReturnRemovedPlayerCity(cityName)}
           onDrawEvent={() => void handleDrawEvent()}
           onOpenEpidemic={() => setIsEpidemicOpen(true)}
         />

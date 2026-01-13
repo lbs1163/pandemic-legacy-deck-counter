@@ -655,10 +655,14 @@ button {
     grid-column: 1 / 2;
   }
 
-  .playerCards {
-    order: 1;
-    grid-column: 2 / 3;
-  }
+.playerCards {
+  order: 1;
+  grid-column: 2 / 3;
+}
+
+.playerCards .zoneCard + .zoneCard {
+  margin-top: 16px;
+}
 
   .zones {
     order: 2;

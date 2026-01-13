@@ -95,8 +95,12 @@ type GameState = {
 
   playerPiles: number[];
   playerCityCounts: CityCardsSnapshot[];
+  playerRemovedCityCounts: CityCardsSnapshot[];
+  playerDrawnCityCounts: CityCardsSnapshot[];
   playerEventCounts: number;
   playerEpidemicCounts: number;
+  playerDrawnEventCounts: number;
+  playerDrawnEpidemicCounts: number;
   initialEpidemicCounts: number;
 };
 
@@ -117,8 +121,12 @@ export interface GameSnapshot {
   
   playerPiles: number[];
   playerCityCounts: CityCardsSnapshot[];
+  playerRemovedCityCounts: CityCardsSnapshot[];
   playerEventCounts: number;
   playerEpidemicCounts: number;
+  playerDrawnCityCounts: CityCardsSnapshot[];
+  playerDrawnEventCounts: number;
+  playerDrawnEpidemicCounts: number;
   initialEpidemicCounts: number;
 }
 
@@ -134,8 +142,14 @@ const EPIDEMIC_CARD_RULES: { maxCityCards: number; epidemicCards: number }[] = [
 ];
 
 // Decide epidemic cards only from the number of city cards (exclude events/epidemics).
-export function calculateInitialEpidemicCounts(cityInfos: CityInfo[]): number {
-  const totalCityCards = cityInfos.reduce((acc, cityInfo) => acc + cityInfo.playerCardsCount, 0);
+export function calculateInitialEpidemicCounts(
+  cityInfos: CityInfo[],
+  removedPlayerCityCounts?: Record<string, number>
+): number {
+  const totalCityCards = cityInfos.reduce((acc, cityInfo) => {
+    const removedCount = removedPlayerCityCounts?.[cityInfo.name] ?? 0;
+    return acc + Math.max(0, cityInfo.playerCardsCount - removedCount);
+  }, 0);
   const matchedRule = EPIDEMIC_CARD_RULES.find((rule) => totalCityCards <= rule.maxCityCards);
   return matchedRule?.epidemicCards ?? 10;
 }
@@ -171,14 +185,21 @@ function createInitialState(
   cityInfos: CityInfo[],
   players?: number,
   eventCount?: number,
-  removedCounts?: Record<string, number>
+  removedCounts?: Record<string, number>,
+  removedPlayerCityCounts?: Record<string, number>
 ): GameState {
   players = players ?? 4;
   eventCount = eventCount ?? 4;
 
   const initialDraws = players == 3 ? 9 : 8;
-  const initialEpidemicCounts = calculateInitialEpidemicCounts(cityInfos);
-  const cityCards = cityInfos.reduce((acc, cityInfo) => acc + cityInfo.playerCardsCount, 0);
+  const initialEpidemicCounts = calculateInitialEpidemicCounts(
+    cityInfos,
+    removedPlayerCityCounts
+  );
+  const cityCards = cityInfos.reduce((acc, cityInfo) => {
+    const removedCount = removedPlayerCityCounts?.[cityInfo.name] ?? 0;
+    return acc + Math.max(0, cityInfo.playerCardsCount - removedCount);
+  }, 0);
   const remaining = cityCards + eventCount + initialEpidemicCounts - initialDraws;
   
   // Split remaining into epidemicCount piles as evenly as possible, larger piles on top
@@ -207,10 +228,29 @@ function createInitialState(
     playerPiles: [initialDraws, ...epidemicPiles],
     playerCityCounts: cityInfos.map((cityInfo) => ({
       name: cityInfo.name,
-      count: cityInfo.playerCardsCount
+      count: Math.max(
+        0,
+        cityInfo.playerCardsCount - (removedPlayerCityCounts?.[cityInfo.name] ?? 0)
+      )
+    })),
+    playerRemovedCityCounts: cityInfos.map((cityInfo) => ({
+      name: cityInfo.name,
+      count: Math.max(
+        0,
+        Math.min(
+          cityInfo.playerCardsCount,
+          removedPlayerCityCounts?.[cityInfo.name] ?? 0
+        )
+      )
+    })),
+    playerDrawnCityCounts: cityInfos.map((cityInfo) => ({
+      name: cityInfo.name,
+      count: 0,
     })),
     playerEventCounts: eventCount,
     playerEpidemicCounts: initialEpidemicCounts,
+    playerDrawnEventCounts: 0,
+    playerDrawnEpidemicCounts: 0,
     initialEpidemicCounts,
   };
 
@@ -260,6 +300,36 @@ function migrateState(state: GameState): GameState {
   state.infectionCityCardsStates = state.infectionCityCardsStates.map((entry) => migrateInfectionCityState(entry));
   if (typeof state.initialEpidemicCounts !== 'number' || Number.isNaN(state.initialEpidemicCounts)) {
     state.initialEpidemicCounts = Math.max(1, state.playerPiles.length - 1);
+  }
+  if (!Array.isArray(state.playerRemovedCityCounts)) {
+    state.playerRemovedCityCounts = state.cityInfos.map((cityInfo) => ({
+      name: cityInfo.name,
+      count: 0,
+    }));
+  } else {
+    const existing = new Map(state.playerRemovedCityCounts.map((entry) => [entry.name, entry.count]));
+    state.playerRemovedCityCounts = state.cityInfos.map((cityInfo) => ({
+      name: cityInfo.name,
+      count: Math.max(0, existing.get(cityInfo.name) ?? 0),
+    }));
+  }
+  if (!Array.isArray(state.playerDrawnCityCounts)) {
+    state.playerDrawnCityCounts = state.cityInfos.map((cityInfo) => ({
+      name: cityInfo.name,
+      count: 0,
+    }));
+  } else {
+    const existing = new Map(state.playerDrawnCityCounts.map((entry) => [entry.name, entry.count]));
+    state.playerDrawnCityCounts = state.cityInfos.map((cityInfo) => ({
+      name: cityInfo.name,
+      count: Math.max(0, existing.get(cityInfo.name) ?? 0),
+    }));
+  }
+  if (typeof state.playerDrawnEventCounts !== 'number' || Number.isNaN(state.playerDrawnEventCounts)) {
+    state.playerDrawnEventCounts = 0;
+  }
+  if (typeof state.playerDrawnEpidemicCounts !== 'number' || Number.isNaN(state.playerDrawnEpidemicCounts)) {
+    state.playerDrawnEpidemicCounts = 0;
   }
   return state;
 }
@@ -400,8 +470,12 @@ function buildSnapshot(state: GameState): GameSnapshot {
 
     playerPiles: cloneState(state.playerPiles),
     playerCityCounts: sortCities(state, state.playerCityCounts),
+    playerRemovedCityCounts: sortCities(state, state.playerRemovedCityCounts),
+    playerDrawnCityCounts: sortCities(state, state.playerDrawnCityCounts),
     playerEventCounts: state.playerEventCounts,
     playerEpidemicCounts: state.playerEpidemicCounts,
+    playerDrawnEventCounts: state.playerDrawnEventCounts,
+    playerDrawnEpidemicCounts: state.playerDrawnEpidemicCounts,
     initialEpidemicCounts: state.initialEpidemicCounts,
     cityInfos: cloneState(state.cityInfos),
   };
@@ -495,6 +569,14 @@ export async function addCity(
       name: cityName,
       count: 0,
     });
+    state.playerRemovedCityCounts.push({
+      name: cityName,
+      count: 0,
+    });
+    state.playerDrawnCityCounts.push({
+      name: cityName,
+      count: 0,
+    });
 
     return state;
   });
@@ -512,7 +594,17 @@ export async function startNewGame(params?: { players?: number; eventCount?: num
       acc[entry.name] = entry.removed;
       return acc;
     }, {});
-    return createInitialState(state.cityInfos, params?.players, params?.eventCount, removedCounts);
+    const removedPlayerCounts = state.playerRemovedCityCounts.reduce<Record<string, number>>((acc, entry) => {
+      acc[entry.name] = entry.count;
+      return acc;
+    }, {});
+    return createInitialState(
+      state.cityInfos,
+      params?.players,
+      params?.eventCount,
+      removedCounts,
+      removedPlayerCounts
+    );
   });
 }
 
@@ -551,6 +643,12 @@ export async function drawPlayerCity(cityName: string): Promise<GameSnapshot> {
 
     drawFromTopPile(state);
     current.count -= 1;
+    const drawn = state.playerDrawnCityCounts.find((city) => city.name === key);
+    if (!drawn) {
+      state.playerDrawnCityCounts.push({ name: key, count: 1 });
+    } else {
+      drawn.count += 1;
+    }
 
     return state;
   });
@@ -564,6 +662,7 @@ export async function drawPlayerEvent(): Promise<GameSnapshot> {
 
     drawFromTopPile(state);
     state.playerEventCounts -= 1;
+    state.playerDrawnEventCounts += 1;
 
     return state;
   });
@@ -600,6 +699,7 @@ export async function drawPlayerEpidemic(bottomInfectionCityCard: string): Promi
 
     state.zoneBLayers = [newLayerCards, ...state.zoneBLayers];
     state.playerEpidemicCounts -= 1;
+    state.playerDrawnEpidemicCounts += 1;
 
     return state;
   });
@@ -641,6 +741,55 @@ export async function returnRemovedInfectionCard(
       throw new Error('유효하지 않은 영역입니다.');
     }
 
+    return state;
+  });
+}
+
+export async function removePlayerCityCard(cityName: string): Promise<GameSnapshot> {
+  return updateState((state) => {
+    const key = normaliseCityName(cityName);
+    if (!key) {
+      throw new Error('도시 이름이 필요합니다.');
+    }
+
+    const cityInfo = state.cityInfos.find((info) => info.name === key);
+    if (!cityInfo) {
+      throw new Error('해당하는 도시의 정보가 없습니다.');
+    }
+
+    const removedEntry = state.playerRemovedCityCounts.find((entry) => entry.name === key);
+    if (!removedEntry) {
+      throw new Error('제거된 도시 카드 정보가 없습니다.');
+    }
+
+    const drawnEntry = state.playerDrawnCityCounts.find((entry) => entry.name === key);
+    if (!drawnEntry || drawnEntry.count <= 0) {
+      throw new Error('드로우한 도시 카드가 없습니다.');
+    }
+
+    if (removedEntry.count >= cityInfo.playerCardsCount) {
+      throw new Error('더 이상 제거할 수 없습니다.');
+    }
+
+    drawnEntry.count -= 1;
+    removedEntry.count += 1;
+    return state;
+  });
+}
+
+export async function returnRemovedPlayerCityCard(cityName: string): Promise<GameSnapshot> {
+  return updateState((state) => {
+    const key = normaliseCityName(cityName);
+    if (!key) {
+      throw new Error('도시 이름이 필요합니다.');
+    }
+
+    const removedEntry = state.playerRemovedCityCounts.find((entry) => entry.name === key);
+    if (!removedEntry || removedEntry.count <= 0) {
+      throw new Error('제거된 도시 카드가 없습니다.');
+    }
+
+    removedEntry.count -= 1;
     return state;
   });
 }

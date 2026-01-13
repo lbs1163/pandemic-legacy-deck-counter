@@ -259,6 +259,20 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     ? cityProbabilities.epidemic
     : cityProbabilities.nonEpidemic;
 
+  const visibleZoneACities = useMemo(() => {
+    const visible = new Set<string>();
+    showingCityProbabilities.forEach((city) => {
+      const total = city.probs.reduce(
+        (acc, entry) => acc + (entry.draw > 0 ? entry.probability : 0),
+        0
+      );
+      if (total > 0) {
+        visible.add(city.name);
+      }
+    });
+    return visible;
+  }, [showingCityProbabilities]);
+
   const cityInfoMap = useMemo(() => {
     const entries = new Map<string, CityInfo>();
     deck.cityInfos.forEach((info) => {
@@ -560,6 +574,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           zoneC={deck.zoneC}
           zoneD={deck.zoneD}
           removed={deck.removed}
+          visibleZoneACities={visibleZoneACities}
           isBusy={isBusy}
           cityInfoMap={cityInfoMap}
           onIncrement={(cityName) => void handleIncrement(cityName)}

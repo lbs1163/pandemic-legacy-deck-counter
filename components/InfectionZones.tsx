@@ -28,6 +28,7 @@ interface InfectionZonesProps {
   zoneC: CityCardsSnapshot[];
   zoneD: CityCardsSnapshot[];
   removed: CityCardsSnapshot[];
+  visibleZoneACities?: Set<string>;
   isBusy: boolean;
   cityInfoMap: Map<string, CityInfo>;
   onIncrement: (cityName: string) => void;
@@ -41,6 +42,7 @@ export function InfectionZones({
   zoneC,
   zoneD,
   removed,
+  visibleZoneACities,
   isBusy,
   cityInfoMap,
   onIncrement,
@@ -50,14 +52,22 @@ export function InfectionZones({
   const renderZoneList = (
     zone: CityCardsSnapshot[],
     action?: (name: string) => void,
-    removeAction?: (name: string) => void
+    removeAction?: (name: string) => void,
+    visibleCities?: Set<string>
   ) => {
     const items: ReactNode[] = [];
     let prevColorKey: string | null = null;
+    const orderedZone = visibleCities
+      ? [
+          ...zone.filter((city) => visibleCities.has(city.name)),
+          ...zone.filter((city) => !visibleCities.has(city.name))
+        ]
+      : zone;
 
-    zone.forEach((city, index) => {
+    orderedZone.forEach((city, index) => {
       const cityInfo = cityInfoMap.get(city.name);
       const colorKey = cityInfo?.color ?? 'none';
+      const isVisible = visibleCities ? visibleCities.has(city.name) : true;
 
       if (index > 0 && colorKey !== prevColorKey) {
         items.push(
@@ -87,7 +97,11 @@ export function InfectionZones({
                 </button>
               )}
               {action && (
-                <button className="addButton" onClick={() => action(city.name)} disabled={isBusy}>
+                <button
+                  className="addButton"
+                  onClick={() => action(city.name)}
+                  disabled={isBusy || !isVisible}
+                >
                   +
                 </button>
               )}
@@ -105,7 +119,7 @@ export function InfectionZones({
   return (
     <section className="zones">
       <ZoneCard {...ZONE_INFO.A}>
-        {renderZoneList(zoneA, onIncrement, onRemoveDiscard)}
+        {renderZoneList(zoneA, onIncrement, onRemoveDiscard, visibleZoneACities)}
       </ZoneCard>
 
       <ZoneCard {...ZONE_INFO.B}>

@@ -41,12 +41,14 @@ export function InfectionPrediction({
 
   const rows = useMemo(
     () =>
-      probabilities.map((city, index) => {
-        const total = Array.from({ length: numDraw }, (_, i) =>
-          getProbabilityForDraw(city, i + 1)
-        ).reduce((acc, value) => acc + value, 0);
-        return { city, total, index };
-      }),
+      probabilities
+        .map((city, index) => {
+          const total = Array.from({ length: numDraw }, (_, i) =>
+            getProbabilityForDraw(city, i + 1)
+          ).reduce((acc, value) => acc + value, 0);
+          return { city, total, index };
+        })
+        .filter((row) => row.total > 0),
     [numDraw, probabilities]
   );
 

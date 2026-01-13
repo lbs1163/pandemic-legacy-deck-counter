@@ -319,6 +319,15 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     return totals;
   }, [cityInfoMap, deck.playerCityCounts]);
 
+  const remainingCityTotal = useMemo(
+    () => deck.playerCityCounts.reduce((acc, city) => acc + city.count, 0),
+    [deck.playerCityCounts]
+  );
+  const remainingPlayerTotal = useMemo(
+    () => remainingCityTotal + deck.playerEventCounts + deck.playerEpidemicCounts,
+    [remainingCityTotal, deck.playerEventCounts, deck.playerEpidemicCounts]
+  );
+
   const playerPileSummaries = useMemo<PlayerPileSummary[]>(() => {
     return deck.playerPiles.map((count, index) => {
       const isActive = index === pileIndex && count > 0;
@@ -598,6 +607,8 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           epidemicProbabilityLabel={epidemicProbabilityLabel}
           piles={playerPileSummaries}
           cityColorTotals={playerCityColorTotals}
+          remainingCityTotal={remainingCityTotal}
+          remainingPlayerTotal={remainingPlayerTotal}
         />
 
         <InfectionPrediction

@@ -15,13 +15,19 @@ interface PlayerDeckSummaryProps {
   epidemicProbabilityLabel: string;
   piles: PlayerPileSummary[];
   cityColorTotals: Record<CityColor, number>;
+  remainingCityTotal: number;
+  remainingPlayerTotal: number;
 }
 
 export function PlayerDeckSummary({
   epidemicProbabilityLabel,
   piles,
-  cityColorTotals
+  cityColorTotals,
+  remainingCityTotal,
+  remainingPlayerTotal
 }: PlayerDeckSummaryProps) {
+  const totalShare = remainingPlayerTotal > 0 ? remainingCityTotal / remainingPlayerTotal : 0;
+  const totalPercent = Math.max(0, Math.min(100, totalShare * 100));
   return (
     <section className="playerCardsPrediction">
       <div className="deckSummary">
@@ -41,6 +47,14 @@ export function PlayerDeckSummary({
               <span className="pileCount">{pile.count}장</span>
             </div>
           ))}
+        </div>
+        <div className="playerCityTotal">
+          <div className="playerCityTotalLabel">
+            남은 도시 카드 총합 <strong>{remainingCityTotal}</strong>장
+          </div>
+          <div className="playerCityTotalBar" aria-hidden="true">
+            <span className="playerCityTotalFill" style={{ width: `${totalPercent}%` }} />
+          </div>
         </div>
         <div className="playerColorTotals">
           {CITY_COLOR_ORDER.map((color) => (

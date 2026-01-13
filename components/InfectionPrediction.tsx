@@ -13,6 +13,7 @@ interface InfectionPredictionProps {
   probabilities: CityProbability[];
   probabilityFormatter: Intl.NumberFormat;
   cityInfoMap: Map<string, CityInfo>;
+  removedCounts: Map<string, number>;
   onChangeNumDraw: (value: number) => void;
   onTogglePredict: (checked: boolean) => void;
 }
@@ -27,6 +28,7 @@ export function InfectionPrediction({
   probabilities,
   probabilityFormatter,
   cityInfoMap,
+  removedCounts,
   onChangeNumDraw,
   onTogglePredict
 }: InfectionPredictionProps) {
@@ -41,14 +43,12 @@ export function InfectionPrediction({
 
   const rows = useMemo(
     () =>
-      probabilities
-        .map((city, index) => {
-          const total = Array.from({ length: numDraw }, (_, i) =>
-            getProbabilityForDraw(city, i + 1)
-          ).reduce((acc, value) => acc + value, 0);
-          return { city, total, index };
-        })
-        .filter((row) => row.total > 0),
+      probabilities.map((city, index) => {
+        const total = Array.from({ length: numDraw }, (_, i) =>
+          getProbabilityForDraw(city, i + 1)
+        ).reduce((acc, value) => acc + value, 0);
+        return { city, total, index };
+      }),
     [numDraw, probabilities]
   );
 
@@ -180,12 +180,21 @@ export function InfectionPrediction({
           <tbody>
             {sortedRows.map(({ city, total }) => {
               const totalFill = Math.max(0, Math.min(100, total * 100));
+              const removedCount = removedCounts.get(city.name) ?? 0;
+              const infectionCardsCount = cityInfoMap.get(city.name)?.infectionCardsCount ?? 0;
+              const isFullyRemoved =
+                infectionCardsCount > 0 && removedCount >= infectionCardsCount;
               return (
                 <tr key={`prob-${city.name}`}>
                   <th scope="row">
                     <div className="probCity">
                       <CityColorDot color={getCityColor(city.name)} />
-                      <span className="cityName">{city.name}</span>
+                      <span
+                        className={`cityName${isFullyRemoved ? ' cityNameDisabled' : ''}`}
+                        style={{ textDecoration: isFullyRemoved ? 'line-through' : 'none' }}
+                      >
+                        {city.name}
+                      </span>
                     </div>
                   </th>
                   {Array.from({ length: numDraw }, (_, index) => {

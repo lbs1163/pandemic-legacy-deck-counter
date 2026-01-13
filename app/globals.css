@@ -372,6 +372,14 @@ button {
   white-space: nowrap;
 }
 
+.probCity .cityName.cityNameDisabled {
+  color: #6b7280;
+}
+
+.zoneCityText .cityName.cityNameDisabled {
+  color: #6b7280;
+}
+
 .cityCount {
   font-size: 0.95rem;
   color: #d1d5db;

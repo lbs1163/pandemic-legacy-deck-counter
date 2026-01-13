@@ -29,6 +29,7 @@ interface InfectionZonesProps {
   zoneD: CityCardsSnapshot[];
   removed: CityCardsSnapshot[];
   visibleZoneACities?: Set<string>;
+  disabledZoneACities?: Set<string>;
   isBusy: boolean;
   cityInfoMap: Map<string, CityInfo>;
   onIncrement: (cityName: string) => void;
@@ -43,6 +44,7 @@ export function InfectionZones({
   zoneD,
   removed,
   visibleZoneACities,
+  disabledZoneACities,
   isBusy,
   cityInfoMap,
   onIncrement,
@@ -53,7 +55,8 @@ export function InfectionZones({
     zone: CityCardsSnapshot[],
     action?: (name: string) => void,
     removeAction?: (name: string) => void,
-    visibleCities?: Set<string>
+    visibleCities?: Set<string>,
+    disabledCities?: Set<string>
   ) => {
     const items: ReactNode[] = [];
     let prevColorKey: string | null = null;
@@ -68,6 +71,7 @@ export function InfectionZones({
       const cityInfo = cityInfoMap.get(city.name);
       const colorKey = cityInfo?.color ?? 'none';
       const isVisible = visibleCities ? visibleCities.has(city.name) : true;
+      const isDisabled = disabledCities ? disabledCities.has(city.name) : false;
 
       if (index > 0 && colorKey !== prevColorKey) {
         items.push(
@@ -79,7 +83,9 @@ export function InfectionZones({
         <li key={city.name} className="zoneListItem">
           <div className="zoneCityText">
             <CityColorDot color={cityInfo?.color} />
-            <span className="cityName">{city.name}</span>
+            <span className={`cityName${isDisabled ? ' cityNameDisabled' : ''}`}>
+              {city.name}
+            </span>
             <span className="cityCount">
               {city.count}
               <span className="countUnit">장</span>
@@ -119,7 +125,7 @@ export function InfectionZones({
   return (
     <section className="zones">
       <ZoneCard {...ZONE_INFO.A}>
-        {renderZoneList(zoneA, onIncrement, onRemoveDiscard, visibleZoneACities)}
+        {renderZoneList(zoneA, onIncrement, onRemoveDiscard, visibleZoneACities, disabledZoneACities)}
       </ZoneCard>
 
       <ZoneCard {...ZONE_INFO.B}>

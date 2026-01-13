@@ -281,6 +281,25 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     return entries;
   }, [deck.cityInfos]);
 
+  const removedCounts = useMemo(() => {
+    const entries = new Map<string, number>();
+    deck.removed.forEach((city) => {
+      entries.set(city.name, city.count);
+    });
+    return entries;
+  }, [deck.removed]);
+
+  const disabledZoneACities = useMemo(() => {
+    const disabled = new Set<string>();
+    deck.cityInfos.forEach((cityInfo) => {
+      const removedCount = removedCounts.get(cityInfo.name) ?? 0;
+      if (cityInfo.infectionCardsCount > 0 && removedCount >= cityInfo.infectionCardsCount) {
+        disabled.add(cityInfo.name);
+      }
+    });
+    return disabled;
+  }, [deck.cityInfos, removedCounts]);
+
   const playerCityColorTotals = useMemo(() => {
     const totals: Record<CityColor, number> = {
       Red: 0,
@@ -552,6 +571,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           probabilities={showingCityProbabilities}
           probabilityFormatter={probabilityFormatter}
           cityInfoMap={cityInfoMap}
+          removedCounts={removedCounts}
           onChangeNumDraw={setNumDraw}
           onTogglePredict={setPredictEpidemic}
         />
@@ -575,6 +595,7 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           zoneD={deck.zoneD}
           removed={deck.removed}
           visibleZoneACities={visibleZoneACities}
+          disabledZoneACities={disabledZoneACities}
           isBusy={isBusy}
           cityInfoMap={cityInfoMap}
           onIncrement={(cityName) => void handleIncrement(cityName)}

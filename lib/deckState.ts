@@ -705,6 +705,20 @@ export async function drawPlayerEpidemic(bottomInfectionCityCard: string): Promi
   });
 }
 
+export async function drawPlayerEpidemicWithoutEffect(): Promise<GameSnapshot> {
+  return updateState((state) => {
+    if (state.playerEpidemicCounts <= 0) {
+      throw new Error('?⑥? ?꾩뿼 移대뱶媛 ?놁뒿?덈떎.');
+    }
+
+    drawFromTopPile(state, true);
+    state.playerEpidemicCounts -= 1;
+    state.playerDrawnEpidemicCounts += 1;
+
+    return state;
+  });
+}
+
 function addCardToZoneBTop(state: GameState, cityName: string) {
   if (state.zoneBLayers.length === 0) {
     state.zoneBLayers.push([]);

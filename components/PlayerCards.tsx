@@ -12,12 +12,14 @@ interface PlayerCardsProps {
   drawnEpidemicCount: number;
   isBusy: boolean;
   canTriggerEpidemic: boolean;
+  canDiscardEpidemic: boolean;
   cityInfoMap: Map<string, CityInfo>;
   onDrawCity: (cityName: string) => void;
   onRemoveCity: (cityName: string) => void;
   onReturnRemovedCity: (cityName: string) => void;
   onDrawEvent: () => void;
   onOpenEpidemic: () => void;
+  onDiscardEpidemic: () => void;
 }
 
 export function PlayerCards({
@@ -30,12 +32,14 @@ export function PlayerCards({
   drawnEpidemicCount,
   isBusy,
   canTriggerEpidemic,
+  canDiscardEpidemic,
   cityInfoMap,
   onDrawCity,
   onRemoveCity,
   onReturnRemovedCity,
   onDrawEvent,
-  onOpenEpidemic
+  onOpenEpidemic,
+  onDiscardEpidemic
 }: PlayerCardsProps) {
   const removedCityMap = new Map(removedCities.map((city) => [city.name, city.count]));
   const remainingCityMap = new Map(cities.map((city) => [city.name, city.count]));
@@ -141,6 +145,14 @@ export function PlayerCards({
             aria-label="전염 카드 드로우"
           >
             +
+          </button>
+          <button
+            className="removeButton"
+            onClick={onDiscardEpidemic}
+            disabled={isBusy || !canDiscardEpidemic}
+            aria-label="전염 카드 효과 없이 버리기"
+          >
+            효과 없이 버리기
           </button>
         </div>
       </li>

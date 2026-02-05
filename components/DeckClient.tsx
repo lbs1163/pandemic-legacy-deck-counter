@@ -189,6 +189,8 @@ export default function DeckClient({ initialData }: DeckClientProps) {
   const canTriggerEpidemic =
     isEpidemicInCurrentPile && epidemicCandidates.length > 0;
 
+  const canDiscardEpidemic = isEpidemicInCurrentPile;
+
   useEffect(() => {
     if (!canTriggerEpidemic && predictEpidemic) {
       setPredictEpidemic(false);
@@ -461,6 +463,22 @@ export default function DeckClient({ initialData }: DeckClientProps) {
     [applyError, applySnapshot, startRequest]
   );
 
+  const handleDiscardEpidemic = useCallback(async () => {
+    const requestId = startRequest();
+    setIsBusy(true);
+    applyError(null, requestId);
+    try {
+      const updated = await mutateDeck('/api/deck/player/draw/epidemic', {});
+      applySnapshot(updated, requestId);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : '?꾩뿼 移대뱶 踰꾨━湲???ㅽ뙣';
+      applyError(message, requestId);
+    } finally {
+      setIsBusy(false);
+    }
+  }, [applyError, applySnapshot, startRequest]);
+
   const handleDrawEvent = useCallback(async () => {
     const requestId = startRequest();
     setIsBusy(true);
@@ -633,12 +651,14 @@ export default function DeckClient({ initialData }: DeckClientProps) {
           drawnEpidemicCount={deck.playerDrawnEpidemicCounts}
           isBusy={isBusy}
           canTriggerEpidemic={canTriggerEpidemic}
+          canDiscardEpidemic={canDiscardEpidemic}
           cityInfoMap={cityInfoMap}
           onDrawCity={(cityName) => void handleDrawCity(cityName)}
           onRemoveCity={(cityName) => void handleRemovePlayerCity(cityName)}
           onReturnRemovedCity={(cityName) => void handleReturnRemovedPlayerCity(cityName)}
           onDrawEvent={() => void handleDrawEvent()}
           onOpenEpidemic={() => setIsEpidemicOpen(true)}
+          onDiscardEpidemic={() => void handleDiscardEpidemic()}
         />
 
         <InfectionZones
